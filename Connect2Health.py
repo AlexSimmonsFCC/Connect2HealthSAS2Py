@@ -1161,109 +1161,361 @@ county_data_cumm_provs['usgteq3_c'] = county_data_cumm_provs['pctUSGt3000kAndLt4
 county_data_cumm_provs['usgteq3_s'] = county_data_cumm_provs['pctUSGt3000kAndLt4000k_hi_s'] + county_data_cumm_provs['pctUSGt4000kAndLt6000k_hi_s'] + county_data_cumm_provs['pctUSGt6000kAndLt10000k_hi_s'] + county_data_cumm_provs['pctUSGt10000kAndLt15000k_hi_s'] + county_data_cumm_provs['pctUSGt15000kAndLt25000k_hi_s'] + county_data_cumm_provs['pctUSGt25000kAndLt50000k_hi_s'] + county_data_cumm_provs['pctUSGt50000kAndLt100000k_hi_s'] + county_data_cumm_provs['pctUSGt100000kAndLt1Gig_hi_s'] + county_data_cumm_provs['pctUSGt1Gig_hi_s']
 county_data_cumm_provs['usgteq3_n'] = county_data_cumm_provs['pctUSGt3000kAndLt4000k_hi_n'] + county_data_cumm_provs['pctUSGt4000kAndLt6000k_hi_n'] + county_data_cumm_provs['pctUSGt6000kAndLt10000k_hi_n'] + county_data_cumm_provs['pctUSGt10000kAndLt15000k_hi_n'] + county_data_cumm_provs['pctUSGt15000kAndLt25000k_hi_n'] + county_data_cumm_provs['pctUSGt25000kAndLt50000k_hi_n'] + county_data_cumm_provs['pctUSGt50000kAndLt100000k_hi_n'] + county_data_cumm_provs['pctUSGt100000kAndLt1Gig_hi_n'] + county_data_cumm_provs['pctUSGt1Gig_hi_n']
 
-
-
-county_data_cumm_provs.to_csv(os.path.join(workdir, r'county_data_cumm_provs.csv'), encoding='utf-8')
-
-import pandas as pd
-import signal
-import os
-import numpy
-import functools as func
-os.chdir(r"/home/ec2-user/s3fs")
-workdir = r'/home/ec2-user/s3fs'
-
 county_data_cumm_provs = pd.read_csv('county_data_cumm_provs.csv')
-county_data_cumm_provs['merge_level'] = 'national'
+file = county_data_cumm_provs
+file.rename(columns={'stateFIPS_x':'stateFIPS'}, inplace=True)
+file['merge_level'] = 'national'
+
+## Read in Adoption Data and Create County Table
+AdoptionCounty = pd.read_csv('Adoption_2016_Raw.csv', dtype={'countycode':'str'}).rename(columns={'countycode':'countyFIPS','ratio':'res_concxns_pct_county'})
+AdoptionCounty['countyFIPS'] = AdoptionCounty['countyFIPS']
+AdoptionCounty = AdoptionCounty[['countyFIPS','res_concxns_pct_county']]
+AdoptionCounty['res_concxns_pct_county'] = AdoptionCounty['res_concxns_pct_county'].replace(-9999,0)
+
+# Copy Adoption County Table and Create State Table and Add Merge Column with State Abbreviations
+AdoptionState = pd.read_csv('Adoption_State_National_Raw.csv', low_memory=False, encoding='latin-1')
+AdoptionState['res_concxns_pct_state'] = AdoptionState['res_concxns_pct_state'].replace('*','0')
+AdoptionState['res_concxns_pct_state'] = AdoptionState['res_concxns_pct_state'].replace('-9999','0')
+AdoptionState['STATE'] = AdoptionState.replace({'STATE' : {'Alabama':'AL',
+'Alaska':'AK',
+'Arizona':'AZ',
+'Arkansas':'AR',
+'California':'CA',
+'Colorado':'CO',
+'Connecticut':'CT',
+'Delaware':'DE',
+'Florida':'FL',
+'Georgia':'GA',
+'Hawaii':'HI',
+'Idaho':'ID',
+'Illinois':'IL',
+'Indiana':'IN',
+'Iowa':'IA',
+'Kansas':'KS',
+'Kentucky':'KY',
+'Louisiana':'LA',
+'Maine':'ME',
+'Maryland':'MD',
+'Massachusetts':'MA',
+'Michigan':'MI',
+'Minnesota':'MN',
+'Mississippi':'MS',
+'Missouri':'MO',
+'Montana':'MT',
+'Nebraska':'NE',
+'Nevada':'NV',
+'New Hampshire':'NH',
+'New Jersey':'NJ',
+'New Mexico':'NM',
+'New York':'NY',
+'North Carolina':'NC',
+'North Dakota':'ND',
+'Ohio':'OH',
+'Oklahoma':'OK',
+'Oregon':'OR',
+'Pennsylvania':'PA',
+'Rhode Island':'RI',
+'South Carolina':'SC',
+'South Dakota':'SD',
+'Tennessee':'TN',
+'Texas':'TX',
+'Utah':'UT',
+'Vermont':'VT',
+'Virginia':'VA',
+'Washington':'WA',
+'West Virginia':'WV',
+'Wisconsin':'WI',
+'Wyoming':'WY',
+'Puerto Rico':'PR',
+'District of Columbia':'DC',
+'American Samoa':'AS',
+'Guam':'GU',
+'U.S. Virgin Islands':'VI',
+'Northern Mariana Islands':'MP'}})
+
+# Get National Adoption Table and Set Data Types for Merge
+AdoptionNational = pd.DataFrame(AdoptionState.loc[AdoptionState['STATE'] == 'Total'])
+AdoptionNational['merge_level'] = 'national'
+AdoptionNational.rename(columns={'res_concxns_pct_state':'res_concxns_pct_national'}, inplace=True)
+AdoptionCounty['countyFIPS'] = AdoptionCounty['countyFIPS'].astype(int)
+
+# Read in Full Broadband Deployment Report and FIPS Table
+FIPS_county = pd.read_csv('FIPScodesAndName2010_headers_dtype.csv', encoding='utf-8-sig', dtype={'STATEFIPS':'str','COUNTYFP':'str'})
+FIPS_county['STATEFP'] = FIPS_county['STATEFP'].apply(lambda x: '{0:0>2}'.format(x))
+FIPS_county['COUNTYFP'] = FIPS_county['COUNTYFP'].apply(lambda x: '{0:0>3}'.format(x))
+bpr_full = pd.read_csv('BPR_Raw.csv', low_memory=False, skiprows=1, thousands=',',encoding='utf-8-sig')
+bpr_full = bpr_full.rename(columns={'Unnamed: 0':'County'})
+
+# Add Columns to FIPS Table for BDR Join
+FIPS_county['ID'] = FIPS_county['COUNTYNAME']+', '+FIPS_county['STATE']
+FIPS_county['countyFIPS'] = FIPS_county['STATEFP'] + FIPS_county['COUNTYFP']
+
+# Handle Special Characters in Columns for All Values
+bpr_full['Pop.  Without Access'] = bpr_full['Pop.  Without Access'].str.replace('.','')
+bpr_full['% of Total Pop.'] = bpr_full['% of Total Pop.'].str.replace('%','')
+bpr_full['% of Total Pop.'] = bpr_full['% of Total Pop.'].str.replace('.','0')
+bpr_full['% of Total Pop.'] = bpr_full['% of Total Pop.'].str.replace(' ','')
+bpr_full['% of Total Pop.'] = bpr_full['% of Total Pop.'].fillna(0)
+bpr_full['Pop. Density'] = bpr_full['Pop. Density'].fillna(0)
+
+# Handle Special Characters in Columns for Urban Values
+bpr_full['Pop.  Without Access.1'] = bpr_full['Pop.  Without Access.1'].str.replace('.','')
+bpr_full['% of Urban Pop.'] = bpr_full['% of Urban Pop.'].str.replace('%','')
+bpr_full['% of Urban Pop.'] = bpr_full['% of Urban Pop.'].str.replace('.','0')
+bpr_full['% of Urban Pop.'] = bpr_full['% of Urban Pop.'].str.replace(' ','')
+bpr_full['% of Urban Pop.'] = bpr_full['% of Urban Pop.'].fillna(0)
+bpr_full['Pop. Density.1'] = bpr_full['Pop. Density.1'].str.replace('.','0')
+bpr_full['Pop. Density.1'] = bpr_full['Pop. Density.1'].fillna(0)
+
+# Handle Special Characters in Columns for Rural Values
+bpr_full['Pop.  Without Access.2'] = bpr_full['Pop.  Without Access.2'].str.replace('.','')
+bpr_full['% of Rural Pop.'] = bpr_full['% of Rural Pop.'].str.replace('%','')
+bpr_full['% of Rural Pop.'] = bpr_full['% of Rural Pop.'].str.replace('.','0')
+bpr_full['% of Rural Pop.'] = bpr_full['% of Rural Pop.'].str.replace(' ','')
+bpr_full['% of Rural Pop.'] = bpr_full['% of Rural Pop.'].fillna(0)
+bpr_full['Pop. Density.2'] = bpr_full['Pop. Density.2'].str.replace('.','0')
+bpr_full['Pop. Density.2'] = bpr_full['Pop. Density.2'].fillna(0)
+
+bpr_full['Per Capita Income ($2014)'] = bpr_full['Per Capita Income ($2014)'].str.replace('.','')
+bpr_full['Per Capita Income ($2014)'] = bpr_full['Per Capita Income ($2014)'].str.replace('$','')
+bpr_full['Per Capita Income ($2014)'] = bpr_full['Per Capita Income ($2014)'].str.replace(' ','')
+
+# Make Numeric Datatype for All, Urban and Rural Values
+bpr_full['Pop.  Without Access'] = bpr_full['Pop.  Without Access'].replace({',':''},regex=True).apply(pd.to_numeric,1)
+bpr_full['% of Total Pop.'] = bpr_full['% of Total Pop.'].replace({',':''},regex=True).apply(pd.to_numeric,1)
+bpr_full['Pop. Density'] = bpr_full['Pop. Density'].astype(float)
+bpr_full['Per Capita Income ($2014)'] = bpr_full['Per Capita Income ($2014)'].replace({',':''},regex=True).apply(pd.to_numeric,1)
+
+bpr_full['Pop.  Without Access.1'] = bpr_full['Pop.  Without Access.1'].replace({',':''},regex=True).apply(pd.to_numeric,1)
+bpr_full['% of Urban Pop.'] = bpr_full['% of Urban Pop.'].replace({',':''},regex=True).apply(pd.to_numeric,1)
+bpr_full['Pop. Density.1'] = bpr_full['Pop. Density.1'].replace({',':''},regex=True).apply(pd.to_numeric,1)
+
+bpr_full['Pop.  Without Access.2'] = bpr_full['Pop.  Without Access.2'].replace({',':''},regex=True).apply(pd.to_numeric,1)
+bpr_full['% of Rural Pop.'] = bpr_full['% of Rural Pop.'].replace({',':''},regex=True).apply(pd.to_numeric,1)
+bpr_full['Pop. Density.2'] = bpr_full['Pop. Density.2'].replace({',':''},regex=True).apply(pd.to_numeric,1)
 
 
-adoption_dec2016_county = pd.read_csv('adoption_dec2016_county.csv')
-adoption_dec2016_state = pd.read_csv('adoption_dec2016_state.csv')
-adoption_dec2016_nat = pd.read_csv('adoption_dec2016_nat.csv')
+# Get List of States to Remove in Counties and Include for States
+states = ['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware','District of Columbia','Florida','Georgia','Guam','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine',
+          'Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio',
+          'Oklahoma','Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington','West Virginia','Wisconsin','Wyoming','Puerto Rico',
+          'Guam','Northern Mariana Islands','American Samoa','Rota','Tinian','Saipan','Northern Islands','U.S. Virgin Islands']
+
+# Get County, State and National Values
+bpr_counties = bpr_full[~bpr_full['County'].isin(states)]
+bpr_counties = bpr_counties[bpr_counties['County'] != 'United States']
+bpr_states = bpr_full[bpr_full['County'].isin(states)]
+bpr_national = pd.DataFrame(bpr_full.loc[bpr_full['County'] == 'United States'])
+
+# Rename Columns for County, State, National
+bpr_counties.rename(columns={  'Pop.  Without Access'      :'bpr_popwoaccess_c',
+                               '% of Total Pop.'          :'bpr_pctpopwoaccess_c',
+                               'Pop. Density'              :'bpr_popdensity_c',
+                               'Per Capita Income ($2014)':'bpr_percapitainome_c',
+                               'Pop.  Without Access.1'    :'bpr_urbanpopwoaccess_c',
+                               '% of Urban Pop.'           :'bpr_urbanpctwoaccess_c',
+                               'Pop. Density.1'           :'bpr_urbanpopdensity_c',
+                               'Pop.  Without Access.2'    :'bpr_ruralpopwoaccess_c',
+                               '% of Rural Pop.'          :'bpr_ruralpctwoaccess_c',
+                               'Pop. Density.2'           :'bpr_ruralpopdensity_c'}, inplace = True)
+
+bpr_states.rename(columns={  'Pop.  Without Access'      :'bpr_popwoaccess_s',
+                               '% of Total Pop.'          :'bpr_pctpopwoaccess_s',
+                               'Pop. Density'              :'bpr_popdensity_s',
+                               'Per Capita Income ($2014)':'bpr_percapitainome_s',
+                               'Pop.  Without Access.1'    :'bpr_urbanpopwoaccess_s',
+                               '% of Urban Pop.'           :'bpr_urbanpctwoaccess_s',
+                               'Pop. Density.1'           :'bpr_urbanpopdensity_s',
+                               'Pop.  Without Access.2'    :'bpr_ruralpopwoaccess_s',
+                               '% of Rural Pop.'          :'bpr_ruralpctwoaccess_s',
+                               'Pop. Density.2'           :'bpr_ruralpopdensity_s'}, inplace = True)
+
+bpr_national.rename(columns={  'Pop.  Without Access'      :'bpr_popwoaccess_n',
+                               '% of Total Pop.'          :'bpr_pctpopwoaccess_n',
+                               'Pop. Density'              :'bpr_popdensity_n',
+                               'Per Capita Income ($2014)':'bpr_percapitainome_n',
+                               'Pop.  Without Access.1'    :'bpr_urbanpopwoaccess_n',
+                               '% of Urban Pop.'           :'bpr_urbanpctwoaccess_n',
+                               'Pop. Density.1'           :'bpr_urbanpopdensity_n',
+                               'Pop.  Without Access.2'    :'bpr_ruralpopwoaccess_n',
+                               '% of Rural Pop.'          :'bpr_ruralpctwoaccess_n',
+                               'Pop. Density.2'           :'bpr_ruralpopdensity_n'}, inplace = True)
 
 
-county_data_cumm_provs = county_data_cumm_provs.merge(adoption_dec2016_county, how='left', on = 'countyFIPS')
-county_data_cumm_provs = county_data_cumm_provs.merge(adoption_dec2016_state, how='left', on = 'stateFIPS')
-county_data_cumm_provs = county_data_cumm_provs.merge(adoption_dec2016_nat, how='left', on = 'merge_level')
-county_data_cumm_provs.to_csv(os.path.join(workdir, r'accessandadoption2016.csv'))
-accessandadoption2016 = county_data_cumm_provs
+# Add Columns for Percent Population With Broadband Access for County, State, National
+bpr_counties['bpr_pctpopwaccess_c'] = 100 - bpr_counties['bpr_pctpopwoaccess_c']
+bpr_states['bpr_pctpopwaccess_s']   = 100 - bpr_states['bpr_pctpopwoaccess_s']
+bpr_national['bpr_pctpopwaccess_n'] = 100 - bpr_national['bpr_pctpopwoaccess_n']
+bpr_counties['bpr_urbanpctwaccess_c'] = 100 - bpr_counties['bpr_urbanpctwoaccess_c']
+bpr_counties['bpr_ruralpctwaccess_c'] = 100 - bpr_counties['bpr_ruralpctwoaccess_c']
+bpr_states['bpr_urbanpctwaccess_s'] = 100 - bpr_states['bpr_urbanpctwoaccess_s']
+bpr_states['bpr_ruralpctwaccess_s'] = 100 - bpr_states['bpr_ruralpctwoaccess_s']
+bpr_national['bpr_urbanpctwaccess_n'] = 100 - bpr_national['bpr_urbanpctwoaccess_n']
+bpr_national['bpr_ruralpctwaccess_n'] = 100 - bpr_national['bpr_ruralpctwoaccess_n']
 
-#Table 67 - Read in Broadband Progress Report
+# Add State Abbreviations for ID Columns in State and County Table
+bpr_counties.County.loc[2:68] = bpr_counties.County.loc[2:68]+', AL'
+bpr_counties.County.loc[70:98] = bpr_counties.County.loc[70:98]+', AK'
+bpr_counties.County.loc[100:104] = bpr_counties.County.loc[100:104]+', AS'
+bpr_counties.County.loc[106:120] = bpr_counties.County.loc[106:120]+', AZ'
+bpr_counties.County.loc[122:196] = bpr_counties.County.loc[122:196]+', AR'
+bpr_counties.County.loc[197:255] = bpr_counties.County.loc[197:255]+', CA'
+bpr_counties.County.loc[257:320] = bpr_counties.County.loc[257:320]+', CO'
+bpr_counties.County.loc[322:329] = bpr_counties.County.loc[322:329]+', CT'
+bpr_counties.County.loc[331:333] = bpr_counties.County.loc[331:333]+', DE'
+bpr_counties.County.loc[336:402] = bpr_counties.County.loc[336:402]+', FL'
+bpr_counties.County.loc[404:562] = bpr_counties.County.loc[404:562]+', GA'
+bpr_counties.County.loc[563:569] = bpr_counties.County.loc[563:569]+', HI'
+bpr_counties.County.loc[570:614] = bpr_counties.County.loc[570:614]+', ID'
+bpr_counties.County.loc[615:717] = bpr_counties.County.loc[615:717]+', IL'
+bpr_counties.County.loc[718:810] = bpr_counties.County.loc[718:810]+', IN'
+bpr_counties.County.loc[811:910] = bpr_counties.County.loc[811:910]+', IA'
+bpr_counties.County.loc[911:1016] = bpr_counties.County.loc[911:1016]+', KS'
+bpr_counties.County.loc[1018:1137] = bpr_counties.County.loc[1018:1137]+', KY'
+bpr_counties.County.loc[1138:1202] = bpr_counties.County.loc[1138:1202]+', LA'
+bpr_counties.County.loc[1203:1219] = bpr_counties.County.loc[1203:1219]+', ME'
+bpr_counties.County.loc[1220:1244] = bpr_counties.County.loc[1220:1244]+', MD'
+bpr_counties.County.loc[1245:1259] = bpr_counties.County.loc[1245:1259]+', MA'
+bpr_counties.County.loc[1260:1343] = bpr_counties.County.loc[1260:1343]+', MI'
+bpr_counties.County.loc[1344:1431] = bpr_counties.County.loc[1344:1431]+', MN'
+bpr_counties.County.loc[1432:1514] = bpr_counties.County.loc[1432:1514]+', MS'
+bpr_counties.County.loc[1515:1630] = bpr_counties.County.loc[1515:1630]+', MO'
+bpr_counties.County.loc[1631:1687] = bpr_counties.County.loc[1631:1687]+', MT'
+bpr_counties.County.loc[1689:1781] = bpr_counties.County.loc[1689:1781]+', NE'
+bpr_counties.County.loc[1783:1799] = bpr_counties.County.loc[1783:1799]+', NV'
+bpr_counties.County.loc[1801:1810] = bpr_counties.County.loc[1801:1810]+', NH'
+bpr_counties.County.loc[1812:1832] = bpr_counties.County.loc[1812:1832]+', NJ'
+bpr_counties.County.loc[1834:1866] = bpr_counties.County.loc[1834:1866]+', NM'
+bpr_counties.County.loc[1868:1928] = bpr_counties.County.loc[1868:1928]+', NY'
+bpr_counties.County.loc[1930:2030] = bpr_counties.County.loc[1930:2030]+', NC'
+bpr_counties.County.loc[2031:2084] = bpr_counties.County.loc[2031:2084]+', ND'
+bpr_counties.County.loc[2085:2178] = bpr_counties.County.loc[2085:2178]+', OH'
+bpr_counties.County.loc[2179:2256] = bpr_counties.County.loc[2179:2256]+', OK'
+bpr_counties.County.loc[2257:2293] = bpr_counties.County.loc[2257:2293]+', OR'
+bpr_counties.County.loc[2294:2361] = bpr_counties.County.loc[2294:2361]+', PA'
+bpr_counties.County.loc[2363:2440] = bpr_counties.County.loc[2363:2440]+', PR'
+bpr_counties.County.loc[2442:2446] = bpr_counties.County.loc[2442:2446]+', RI'
+bpr_counties.County.loc[2448:2493] = bpr_counties.County.loc[2448:2493]+', SC'
+bpr_counties.County.loc[2495:2560] = bpr_counties.County.loc[2495:2560]+', SD'
+bpr_counties.County.loc[2562:2656] = bpr_counties.County.loc[2562:2656]+', TN'
+bpr_counties.County.loc[2658:2911] = bpr_counties.County.loc[2658:2911]+', TX'
+bpr_counties.County.loc[2913:2915] = bpr_counties.County.loc[2913:2915]+', VI'
+bpr_counties.County.loc[2917:2945] = bpr_counties.County.loc[2917:2945]+', UT'
+bpr_counties.County.loc[2947:2960] = bpr_counties.County.loc[2947:2960]+', VT'
+bpr_counties.County.loc[2962:3095] = bpr_counties.County.loc[2962:3095]+', VA'
+bpr_counties.County.loc[3097:3135] = bpr_counties.County.loc[3097:3135]+', WA'
+bpr_counties.County.loc[3137:3191] = bpr_counties.County.loc[3137:3191]+', WV'
+bpr_counties.County.loc[3193:3264] = bpr_counties.County.loc[3193:3264]+', WI'
+bpr_counties.County.loc[3266:3288] = bpr_counties.County.loc[3266:3288]+', WY'
 
-bpr_2018_c = pd.read_csv(r'bpr_2018_c.csv', encoding = 'latin-1' )
-bpr_2018_s = pd.read_csv(r'bpr_2018_s.csv', encoding = 'latin-1' )
-bpr_2018_n = pd.read_csv(r'bpr_2018_n.csv', encoding = 'latin-1' )
+bpr_states['County'] = bpr_states.replace({'County' :
+{'Alabama':'AL',
+'Alaska':'AK',
+'Arizona':'AZ',
+'Arkansas':'AR',
+'California':'CA',
+'Colorado':'CO',
+'Connecticut':'CT',
+'Delaware':'DE',
+'Florida':'FL',
+'Georgia':'GA',
+'Hawaii':'HI',
+'Idaho':'ID',
+'Illinois':'IL',
+'Indiana':'IN',
+'Iowa':'IA',
+'Kansas':'KS',
+'Kentucky':'KY',
+'Louisiana':'LA',
+'Maine':'ME',
+'Maryland':'MD',
+'Massachusetts':'MA',
+'Michigan':'MI',
+'Minnesota':'MN',
+'Mississippi':'MS',
+'Missouri':'MO',
+'Montana':'MT',
+'Nebraska':'NE',
+'Nevada':'NV',
+'New Hampshire':'NH',
+'New Jersey':'NJ',
+'New Mexico':'NM',
+'New York':'NY',
+'North Carolina':'NC',
+'North Dakota':'ND',
+'Ohio':'OH',
+'Oklahoma':'OK',
+'Oregon':'OR',
+'Pennsylvania':'PA',
+'Rhode Island':'RI',
+'South Carolina':'SC',
+'South Dakota':'SD',
+'Tennessee':'TN',
+'Texas':'TX',
+'Utah':'UT',
+'Vermont':'VT',
+'Virginia':'VA',
+'Washington':'WA',
+'West Virginia':'WV',
+'Wisconsin':'WI',
+'Wyoming':'WY',
+'Puerto Rico':'PR',
+'District of Columbia':'DC',
+'American Samoa':'AS',
+'Guam':'GU',
+'U.S. Virgin Islands':'VI',
+'Northern Mariana Islands':'MP'}})
 
-accessandadoption2016 = accessandadoption2016.merge(bpr_2018_c, how='left', on='countyFIPS')
-accessandadoption2016 = accessandadoption2016.merge(bpr_2018_s, how='left', on='stateFIPS')
-accessandadoption2016 = accessandadoption2016.merge(bpr_2018_n, how='left', on='merge_level')
+bpr_counties = bpr_counties.rename(columns={'County':'ID'})
+bpr_states = bpr_states.rename(columns={'County':'STATE'})
 
-accessandadoption2016.to_csv(os.path.join(workdir, r'accessandadoption2016_bpr.csv'))
+# Join Broadband Progress Report, FIPS Codes and Names and Concatenate County, State and National Tables, Format Values and Column Names for Join
+bpr_counties = bpr_counties.merge(FIPS_county[['ID','countyFIPS']], how='left', on='ID')
+bpr_states = bpr_states.merge(FIPS_county[['STATEFP','STATE']], how='left', on='STATE')
+bpr_counties = bpr_counties.drop(['ID'], axis=1)
+bpr_states = bpr_states.drop(['STATE'], axis=1)
+bpr_states.rename(columns={'STATEFP':'stateFIPS'}, inplace=True)
+bpr_counties['countyFIPS'] = bpr_counties['countyFIPS'].fillna(0)
+bpr_states['stateFIPS'] = bpr_states['stateFIPS'].fillna(0)
+bpr_national['merge_level'] = 'national'
+bpr_states = bpr_states.drop_duplicates()
 
-accessandadoption_2016 = pd.read_csv('accessandadoption2016_bpr.csv', low_memory=False)
-accessandadoption_2016['less_than_zero'] = ''
+bpr_counties['countyFIPS'] = bpr_counties['countyFIPS'].astype(int)
+bpr_states['stateFIPS'] = bpr_states['stateFIPS'].astype(int)
 
-if (accessandadoption_2016['pctpopwoBBacc_county'] < 0).any():
-    accessandadoption_2016['less_than_zero'] = 1
-else:
-    accessandadoption_2016['less_than_zero'] = 0
-    
-accessandadoption_2016['totalpct'] = accessandadoption_2016['pctpopwoBBacc_county'] + accessandadoption_2016['pctpopwBBacc_county']
+# Read in SAIPE County, State and National Data and Handle Special Characters
+SAIPE_C = pd.read_csv('SAIPE_County_Raw.csv', skiprows=3, dtype={'State FIPS Code':'str','County FIPS Code':'str'})
+SAIPE_C = SAIPE_C[['County FIPS Code', 'State FIPS Code', 'Poverty Estimate, All Ages','Median Household Income']]
+SAIPE_C.rename(columns={'Poverty Estimate, All Ages':'poverty_allages_c','Median Household Income':'medianHHinc_c'}, inplace=True)
+SAIPE_C['State FIPS Code'] = SAIPE_C['State FIPS Code'].apply(lambda x: '{0:0>2}'.format(x))
+SAIPE_C['State FIPS Code'] = SAIPE_C['State FIPS Code'].astype(str)
+SAIPE_C['County FIPS Code'] = SAIPE_C['County FIPS Code'].apply(lambda x: '{0:0>3}'.format(x))
+SAIPE_C['County FIPS Code'] = SAIPE_C['County FIPS Code'].astype(str)
+SAIPE_C['countyFIPS'] = SAIPE_C['State FIPS Code']+SAIPE_C['County FIPS Code']
+SAIPE_C['poverty_allages_c'] = SAIPE_C['poverty_allages_c'].str.replace(',','')
+SAIPE_C['medianHHinc_c'] = SAIPE_C['medianHHinc_c'].str.replace(',','')
+SAIPE_C['countyFIPS'] = SAIPE_C['countyFIPS'].astype(int)
 
-income_c = pd.read_csv(r'SAIPE_income_c.csv', skiprows =3)
-income_c = income_c[['State FIPS Code','County FIPS Code','Postal Code','Poverty Estimate, All Ages','Median Household Income']].rename(columns={'countyFIPS':'countyFIPS_int','stateFIPS':'stateFIPS_int','Postal Code':'PostalCode','Poverty Estimate, All Ages':'poverty_allages_c','Median Household Income':'medianHHinc_c'})
-income_c['County FIPS Code'] = income_c['County FIPS Code'].apply(lambda x: '{0:0>3}'.format(x))
-income_c['countyFIPS'] = income_c['State FIPS Code'].astype(str)+income_c['County FIPS Code'].astype(str)
-income_c['countyFIPS'] = income_c['countyFIPS'].astype(int)
-income_c = income_c[['countyFIPS', 'poverty_allages_c', 'medianHHinc_c']]
-income_c.to_csv(os.path.join(workdir, r'income_c2.csv'))
-accessandadoption_2016 = income_c.merge(accessandadoption_2016, how='left', on='countyFIPS')
+SAIPE_S = pd.read_csv('SAIPE_State_Raw.csv', skiprows=3)
+SAIPE_S = SAIPE_S[['State FIPS Code','Poverty Estimate, All Ages','Median Household Income']]
+SAIPE_S.rename(columns={'Poverty Estimate, All Ages':'poverty_allages_s','Median Household Income':'medianHHinc_s','State FIPS Code':'stateFIPS'}, inplace=True)
+SAIPE_S['poverty_allages_s'] = SAIPE_S['poverty_allages_s'].str.replace(',','')
+SAIPE_S['medianHHinc_s'] = SAIPE_S['medianHHinc_s'].str.replace(',','')
+SAIPE_S['stateFIPS'] = SAIPE_S['stateFIPS'].astype(int)
 
-income_s = pd.read_csv(r'SAIPE_income_s.csv', skiprows =3)
-income_s = income_s[['State FIPS Code','Poverty Estimate, All Ages','Median Household Income']].rename(columns={'State FIPS Code':'stateFIPS','Poverty Estimate, All Ages':'poverty_allages_s','Median Household Income':'medianHHinc_s'})
-accessandadoption_2016 = income_s.merge(accessandadoption_2016, how='left', on='stateFIPS')
+SAIPE_N = pd.DataFrame(SAIPE_S.loc[SAIPE_S['stateFIPS'] == 0])
+SAIPE_N['merge_level'] = 'national'
+SAIPE_N.rename(columns={'poverty_allages_s':'poverty_allages_n','medianHHinc_s':'medianHHinc_n'}, inplace=True)
+SAIPE_N['poverty_allages_n'] = SAIPE_N['poverty_allages_n'].str.replace(',','')
+SAIPE_N['medianHHinc_n'] = SAIPE_N['medianHHinc_n'].str.replace(',','')
+SAIPE_N = SAIPE_N[['poverty_allages_n','medianHHinc_n','merge_level']]
 
-income_n = pd.read_csv(r'SAIPE_income_n.csv', skiprows = 2)
-income_n = income_n[['merge_level','Poverty Estimate, All Ages','Median Household Income']].rename(columns={'Poverty Estimate, All Ages':'poverty_allages_n','Median Household Income':'medianHHinc_n'})
-accessandadoption_2016 = income_n.merge(accessandadoption_2016, how='inner', on='merge_level')
+# Read in RUCC Report 
+RUCC = pd.read_csv('ERSruralurbancodes2013.csv', low_memory = False, encoding='latin=1')
+RUCC = RUCC[['FIPS','Population_2010','RUCC_2013','Description','RUCC_metrononmetro']]
+RUCC = RUCC.rename(columns={'FIPS':'countyFIPS','Population_2010':'RUCC_Pop_2010','Description':'RUCC_Description'})
 
-accessandadoption_2016.to_csv(os.path.join(workdir, r'accessandadoption2016_BPR_SAIPE.csv'))
-
-import pandas as pd
-import signal
-import os
-import numpy
-import functools as func
-os.chdir(r"/home/ec2-user/s3fs")
-workdir = r'/home/ec2-user/s3fs'
-
-file = pd.read_csv('file.csv', low_memory=False)
-
-## Add BPR Report and Merge With File
-bpr_c = pd.read_csv('bpr_2018_c.csv', low_memory=False)
-bpr_s = pd.read_csv('bpr_2018_s.csv', low_memory=False)
-bpr_n = pd.read_csv('bpr_2018_n.csv', low_memory=False)
-file = file.merge(bpr_c, how='left', on='countyFIPS')
-file = file.merge(bpr_s, how='left', on='stateFIPS')
-file = file.merge(bpr_n, how='left', on='merge_level')
-
-## Add SAIPE Report and Merge With File
-income_c = pd.read_csv('SAIPE_income_c.csv', low_memory=False)
-file = file.merge(income_c, how='left', on='countyFIPS')
-income_s = pd.read_csv(r'SAIPE_income_s.csv', skiprows =3, low_memory=False)
-income_s = income_s[['State FIPS Code','Poverty Estimate, All Ages','Median Household Income']].rename(columns={'State FIPS Code':'stateFIPS','Poverty Estimate, All Ages':'poverty_allages_s','Median Household Income':'medianHHinc_s'})
-file = file.merge(income_s, how='left', on='stateFIPS')
-income_n = pd.read_csv(r'SAIPE_income_n.csv', skiprows = 2, low_memory=False)
-income_n = income_n[['merge_level','Poverty Estimate, All Ages','Median Household Income']].rename(columns={'Poverty Estimate, All Ages':'poverty_allages_n','Median Household Income':'medianHHinc_n'})
-file = file.merge(income_n, how='inner', on='merge_level')
-
-## Add RUCC Report and Merge With File
-rucc = pd.read_csv('ERSruralurbancodes2013.csv', low_memory = False, encoding='latin=1')
-rucc = rucc[['FIPS','Population_2010','RUCC_2013','Description','RUCC_metrononmetro']]
-rucc = rucc.rename(columns={'FIPS':'countyFIPS','Population_2010':'RUCC_Pop_2010','Description':'RUCC_Description'})
-file = file.merge(rucc, how='left', on='countyFIPS')
-
-## Add OMB Report and Merge With File
+# Read in OMB Report 
 OMB = pd.read_csv('OMBRuralDef.csv', encoding ='latin-1')
 OMB = OMB[['Metropolitan/Micropolitan Statistical Area','Central/Outlying County','FIPS State Code','FIPS County Code']]
 OMB['FIPS County Code'] = OMB['FIPS County Code'].astype(int)
@@ -1273,65 +1525,74 @@ OMB['countyFIPS'] = OMB['FIPS State Code'].astype(str) + OMB['FIPS County Code']
 OMB['countyFIPS'] = OMB['countyFIPS'].astype(int)
 OMB = OMB.rename(columns={'Metropolitan/Micropolitan Statistical Area':'OMB_metromicro_sa','Central/Outlying County':'OMB_countytype'})
 OMB = OMB[['countyFIPS', 'OMB_metromicro_sa', 'OMB_countytype']]
-file = file.merge(OMB, how='left', on='countyFIPS')
-file.to_csv(os.path.join('file2.csv'))
 
-## Add ERS Report and Merge With File
+# Read in ERS Report
 ERS = pd.read_csv('ERSCountyTypology2015.csv', skiprows=3, low_memory = False, encoding='latin=1')
 ERS = ERS[['FIPStxt','Metro-nonmetro status, 2013 0=Nonmetro 1=Metro','Non-Overlapping Economic Types: Type_2015_Update','Farming_2015_Update (allows overlap, 1=yes)','Mining_2015-Update (allows overlap, 1=yes)','Manufacturing_2015_Update (allows overlap, 1=yes)','Government_2015_Update (allows overlap, 1=yes)','Recreation_2015_Update (allows overlap, 1=yes)','Nonspecialized_2015_Update (allows overlap, 1=yes)','Low_Education_2015_Update','Low_Employment_Cnty_2008_2012_25_64','Pop_Loss_2010','Retirement_Dest_2015_Update','Persistent_Poverty_2013','Persistent_Related_Child_Poverty_2013']]
 ERS = ERS.rename(columns={'FIPStxt':'countyFIPS','Metro-nonmetro status, 2013 0=Nonmetro 1=Metro':'ERS_Metro_nonmetro','Non-Overlapping Economic Types: Type_2015_Update':'ERS_economictype','Farming_2015_Update (allows overlap, 1=yes)':'ERS_Farming','Mining_2015-Update (allows overlap, 1=yes)':'ERS_Mining','Manufacturing_2015_Update (allows overlap, 1=yes)':'ERS_Manufacturing','Government_2015_Update (allows overlap, 1=yes)':'ERS_Government','Recreation_2015_Update (allows overlap, 1=yes)':'ERS_Recreation','Nonspecialized_2015_Update (allows overlap, 1=yes)':'ERS_Nonspecialized','Low_Education_2015_Update':'ERS_Low_Education','Low_Employment_Cnty_2008_2012_25_64':'ERS_Low_Emp_Cnty_08_12','Pop_Loss_2010':'ERS_Pop_Loss_2010','Retirement_Dest_2015_Update':'ERS_Retirement_Dest','Persistent_Poverty_2013':'ERS_Pers_Pov','Persistent_Related_Child_Poverty_2013':'ERS_Pers_Rel_Child_Pov'})
-file = file.merge(ERS, how='left', on='countyFIPS')
 
-## ADD NCHS Report and Merge With File
-nchs = pd.read_csv('NCHS_ruralcategories.csv', low_memory = False, encoding='latin=1')
-nchs = nchs[['FIPS code','2013 code']]
-nchs = nchs.rename(columns = {'FIPS code':'countyFIPS','2013 code':'NCHS_urbanruralcode'})
-file = file.merge(nchs, how='left', on='countyFIPS')
+# ADD NCHS Report and Merge With File
+NCHS = pd.read_csv('NCHS_ruralcategories.csv', low_memory = False, encoding='latin=1')
+NCHS = NCHS[['FIPS code','2013 code']]
+NCHS = NCHS.rename(columns = {'FIPS code':'countyFIPS','2013 code':'NCHS_urbanruralcode'})
 file['NCHS_rural'] = ''
 
 ## Add CHR Report and Merge With File
 Ranked_Measure_Data = pd.read_csv(r'CHR_RankedMeasureData.csv', skiprows =1, low_memory = False, encoding='latin=1')
-CHR2017_c = pd.read_csv(r'CHR_AdditionalMeasureData.csv', skiprows=1, low_memory = False, encoding='latin=1')
-CHR2017_c = CHR2017_c.merge(Ranked_Measure_Data, how='left', on='FIPS')
-CHR2017_c = CHR2017_c.rename(columns={'Population_x':'Population'})
-CHR2017_c = CHR2017_c.rename(columns={'% Diabetic':'DiabetesPCT_c','Other PCP Rate':'OtherPCPs_c','Household Income':'medianHHIncomeCHR_c','Population':'Population_c','% 65 and over':'pop65plusPCT_c','% Female':'popFemalePCT_c','% Rural':'popRuralPCT_c','# Rural':'PopRural_c','# Deaths':'prematureDeaths_c','% Fair/Poor':'FairPoorHealthPCT_c','Physically Unhealthy Days':'unhealthydays_c','% Smokers':'smokersPCT_c','% Obese':'obesePCT_c','% Physically Inactive':'physInactivePCT_c','% Excessive Drinking':'excessDrinkingPCT_c','# Primary Care Physicians':'PCPNum_c','PCP Ratio':'PopToPCPRatio_c','PCP Rate':'PCPper100000pop_c','# Dentists':'NumDentists_c','Dentist Ratio':'PopToDentistsRatio_c','Dentist Rate':'Dentistsper100000pop_c','# Mental Health Providers':'NumMHP_c','MHP Ratio':'PopToMHPRatio_c','MHP Rate':'MPHper100000pop_c','Preventable Hosp. Rate':'prevhosp_c','% Some College':'pctcollege_c','% Unemployed':'pctunemp_c','# Injury Deaths':'injurydeathrate_c','% Severe Housing Problems':'severehousingPCT_c','FIPS':'countyFIPS','State_x':'stateFIPS'})
-CHR2017_c['PopFemale_c'] = CHR2017_c['Population_c']/(CHR2017_c['popFemalePCT_c']/100)*100
-CHR2017_c['popMalePCT_c'] = 100-CHR2017_c['popFemalePCT_c']
-CHR2017_c['PopMale_c'] = CHR2017_c['Population_c']/(CHR2017_c['popMalePCT_c']/100)*100
-CHR2017_c = CHR2017_c[['countyFIPS','stateFIPS','DiabetesPCT_c','OtherPCPs_c','medianHHIncomeCHR_c','Population_c','pop65plusPCT_c','popFemalePCT_c','PopFemale_c','popMalePCT_c','PopMale_c','popRuralPCT_c','PopRural_c','prematureDeaths_c','FairPoorHealthPCT_c','unhealthydays_c','smokersPCT_c','obesePCT_c','physInactivePCT_c','excessDrinkingPCT_c','PCPNum_c','PopToPCPRatio_c','PCPper100000pop_c','NumDentists_c','PopToDentistsRatio_c','Dentistsper100000pop_c','NumMHP_c','PopToMHPRatio_c','MPHper100000pop_c','prevhosp_c','pctcollege_c','pctunemp_c','injurydeathrate_c','severehousingPCT_c']]
-CHR2017_s = CHR2017_c.groupby(['stateFIPS'])
-file = file.merge(CHR2017_c, how='left', on='countyFIPS')
+Ranked_Measure_Data.drop(columns=['Population'], inplace=True)
+CHR2018_c = pd.read_csv(r'CHR_AdditionalMeasureData.csv', skiprows=1, low_memory = False, encoding='latin=1')
+CHR2018_c = CHR2018_c.merge(Ranked_Measure_Data, how='left', on='FIPS')
+CHR2018_c = CHR2018_c.rename(columns={'% Diabetic':'DiabetesPCT_c','Other PCP Rate':'OtherPCPs_c','Household Income':'medianHHIncomeCHR_c','Population':'Population_c','% 65 and over':'pop65plusPCT_c','% Female':'popFemalePCT_c','% Rural':'popRuralPCT_c','# Rural':'PopRural_c','# Deaths':'prematureDeaths_c','% Fair/Poor':'FairPoorHealthPCT_c','Physically Unhealthy Days':'unhealthydays_c','% Smokers':'smokersPCT_c','% Obese':'obesePCT_c','% Physically Inactive':'physInactivePCT_c','% Excessive Drinking':'excessDrinkingPCT_c','# Primary Care Physicians':'PCPNum_c','PCP Ratio':'PCPRatio_c','PCP Rate':'PCPper100000pop_c','# Dentists':'NumDentists_c','Dentist Ratio':'DentistsRatio_c','Dentist Rate':'Dentistsper100000pop_c','# Mental Health Providers':'NumMHP_c','MHP Ratio':'MHPRatio_c','MHP Rate':'MPHper100000pop_c','Preventable Hosp. Rate':'prevhosp_c','% Some College':'pctcollege_c','% Unemployed':'pctunemp_c','# Injury Deaths':'injurydeathrate_c','% Severe Housing Problems':'severehousingPCT_c','FIPS':'countyFIPS','State_x':'stateFIPS','Population_x':'Population','Years of Potential Life Lost Rate':'years_lost_per_100000'})
+CHR2018_c['PopFemale_c'] = CHR2018_c['Population_c']/(CHR2018_c['popFemalePCT_c']/100)*100
+CHR2018_c['popMalePCT_c'] = 100-CHR2018_c['popFemalePCT_c']
+CHR2018_c['PopMale_c'] = CHR2018_c['Population_c']/(CHR2018_c['popMalePCT_c']/100)*100
 
-## Add Housing Units and Get county_fips_population_housing_u
-data = pd.read_csv('gl_data.csv')
-file = file.merge(data, how='left', on='countyFIPS')
-file['county_fips_population_housing_u'] = file['countyFIPS'].astype(str)+';'+file['hu2016'].astype(str)
+## Handle Ratio Values in CHR Report 
+CHR2018_c['PopToPCPRatio_c'] = CHR2018_c['PCPRatio_c'].str.split(':').str[0]
+CHR2018_c.PCPRatio_c = CHR2018_c.PCPRatio_c.str.split(':').str[0]
 
-## Add County FIPS Code
-income_c = pd.read_csv(r'SAIPE_income_c_For_County_FIPS_Code.csv', skiprows =3)
-income_c = income_c[['State FIPS Code','County FIPS Code','Postal Code']]
-income_c['County FIPS Code2'] = income_c['County FIPS Code']
-income_c['County FIPS Code'] = income_c['County FIPS Code'].apply(lambda x: '{0:0>3}'.format(x))
-income_c['countyFIPS'] = income_c['State FIPS Code'].astype(str)+income_c['County FIPS Code'].astype(str)
-income_c['countyFIPS'] = income_c['countyFIPS'].astype(int)
-file = file.merge(income_c, how='left',on='countyFIPS')
+CHR2018_c['PopToDentistsRatio_c'] = CHR2018_c.DentistsRatio_c.str.split(':').str[0]
+CHR2018_c.DentistsRatio_c = CHR2018_c.DentistsRatio_c.str.split(':').str[0]
 
-## Add rural values
-bb_access_c_r = pd.read_csv('bb_access_c_r.csv')
-bb_access_s_r = pd.read_csv('bb_access_s_r.csv')
-bb_access_n_r = pd.read_csv('bb_access_n_r.csv')
+CHR2018_c['PopToMHPRRatio_c'] = CHR2018_c.MHPRatio_c.str.split(':').str[0]
+CHR2018_c.MHPRatio_c = CHR2018_c.MHPRatio_c.str.split(':').str[0]
 
-pop_c_r = pd.read_csv('rural_county_pop.csv')
-pop_s_r = pd.read_csv('rural_state_pop.csv')
-pop_n_r = pd.read_csv('rural_national_pop.csv')
 
-file = file.rename(columns={'stateFIPS_x':'stateFIPS'})
-file = file.merge(bb_access_c_r, how='left',on='countyFIPS')
-file = file.merge(bb_access_s_r, how='left',on='stateFIPS')
-file = file.merge(bb_access_n_r, how='left',on='merge_level')
-file = file.merge(pop_c_r, how='left',on='countyFIPS')
-file = file.merge(pop_s_r, how='left',on='stateFIPS')
-file = file.merge(pop_n_r, how='left',on='merge_level')
+CHR2018_c = CHR2018_c[['countyFIPS','stateFIPS','DiabetesPCT_c','OtherPCPs_c','medianHHIncomeCHR_c','Population_c','pop65plusPCT_c','popFemalePCT_c','PopFemale_c','popMalePCT_c','PopMale_c','popRuralPCT_c','PopRural_c','prematureDeaths_c','FairPoorHealthPCT_c','unhealthydays_c','smokersPCT_c','obesePCT_c','physInactivePCT_c','excessDrinkingPCT_c','PCPNum_c','PopToPCPRatio_c','PCPper100000pop_c','NumDentists_c','PopToDentistsRatio_c','Dentistsper100000pop_c','NumMHP_c','PopToMHPRatio_c','MPHper100000pop_c','prevhosp_c','pctcollege_c','pctunemp_c','injurydeathrate_c','severehousingPCT_c','years_lost_per_100000']]
+CHR2018_s = CHR2018_c.groupby(['stateFIPS'])
+
+# Read in County Health Ranking Trends for Years of Life Lost County, State, National 
+
+YPLL_s = pd.read_csv('CHR_TRENDS_CSV_2018.csv', low_memory = False, encoding='latin-1')
+YPLL_n = YPLL_s.loc[YPLL['county'] == 'United States']
+YPLL_n = YPLL_n.loc[YPLL['chrreleaseyear'] == 2018]
+YPLL_n['merge_level'] = 'national'
+YPLL_s = YPLL.loc[YPLL['countycode'] == 0]
+YPLL_s = YPLL.loc[YPLL['measurename'] == 'Premature death']
+YPLL_s = YPLL.loc[YPLL['chrreleaseyear'] == 2018]
+YPLL_s = YPLL_s[['statecode','measurename']]
+YPLL_s = YPLL_s.rename(columns={'measurename':'years_lost_per_100000_state','statecode':'stateFIPS'})
+YPLL_s['statecode'] = YPLL_s['stateFIPS'].apply(lambda x: '{0:0>2}'.format(x))
+
+# Merge County, State and National Adoption Files
+file = file.merge(AdoptionCounty, how='left', on='countyFIPS')
+file = file.merge(AdoptionState, how='left', on='STATE')
+file = file.merge(AdoptionNational, how='left', on='merge_level')
+file = file.merge(bpr_counties, how='left', on='countyFIPS')
+file = file.merge(bpr_states, how='left', on='stateFIPS')
+file = file.merge(bpr_national, how='left', on='merge_level')
+file = file.merge(SAIPE_C, how='left', on='countyFIPS')
+file = file.merge(SAIPE_S, how='left', on='stateFIPS')
+file = file.merge(SAIPE_N, how='left', on='merge_level')
+file = file.merge(RUCC, how='left', on='countyFIPS')
+file = file.merge(OMB, how='left', on='countyFIPS')
+file = file.merge(ERS, how='left', on='countyFIPS')
+file = file.merge(NCHS, how='left', on='countyFIPS')
+file = file.merge(CHR2018_c, how='left', on='countyFIPS')
+file = file.merge(YPLL_s, how='left', on='stateFIPS')
+file = file.merge(YPLL_n, how='left', on='merge_level')
+file.to_csv(os.path.join('see.csv'))
+
 
 ## Add County Value with Only County Name and the the Word County
 file['county'] = file['COUNTYNAME_x'].str.replace('County','')
