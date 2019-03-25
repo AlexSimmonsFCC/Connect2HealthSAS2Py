@@ -23,7 +23,6 @@ natlbb_pop = natlbb_parsed.merge(geolytics2016_parsed, how ="inner", on="BlockCo
 natlbb_pop['gl_pop'].fillna(0, inplace=True)
 natlbb_pop['gl_pop'] = natlbb_pop['gl_pop'].astype(int)
 natlbb_pop.to_csv(os.path.join(workdir, r'NatlbbWithPopulation.csv'), encoding = 'latin-1')
-natlbb_pop = pd.read_csv('NatlbbWithPopulation.csv', encoding='latin-1',usecols=['stateFIPS','countyFIPS','BlockCode','Consumer','MaxAdDown','MaxAdUp','gl_pop','gl_housingunits','gl_households'])
 county_names_formatted = pd.read_csv('FIPScodesAndName2010_headers_dtype.csv')
 
 #Read in County Level Geolytics, Ensure Common Datatypes, Join County Names and Population Data on FIPS, Sort by FIPS.
@@ -39,7 +38,6 @@ county_names_formatted.to_csv(os.path.join(workdir, r'county_names_formatted_tes
 geolytics_county_parsed['countyFIPS'] = geolytics_county_parsed['countyFIPS'].astype(str)
 county_data = county_names_formatted.merge(geolytics_county_parsed, how="inner", on="countyFIPS")
 county_data['stateFIPS'] = county_data['stateFIPS'].apply('{:0>2}'.format)
-
 
 #Table 1 - Unique Block Groups with Population, County and State FIPS. Drop Duplicates and Reset Index to Increment by 1. Make Columns Explicit.
 BlockGroupPop = pd.concat([natlbb_pop['stateFIPS'], natlbb_pop['BlockCode'], natlbb_pop['countyFIPS'], natlbb_pop['gl_pop']], axis=1)
@@ -95,27 +93,20 @@ bb_access_bc = bb_access_bc.drop_duplicates()
 
 bb_access_bc = bb_access_bc.append(bb_access_bc_no_acesss, ignore_index=True)
 
-
 #Table 10 - Percent of County Population with Broadband Access
 bb_access_c = pd.Series.to_frame(bb_access_bc.groupby(['countyFIPS'])['blockpop_pct_of_county'].sum())
 bb_access_c = bb_access_c.rename(columns={'blockpop_pct_of_county':'pctpopwBBacc_county'})
 bb_access_c['countyFIPS'] = bb_access_c.index
-
-
 
 #Table 11 - Percent of State Population with Broadband Access
 bb_access_s = pd.Series.to_frame(bb_access_bc.groupby(['stateFIPS'])['blockpop_pct_of_state'].sum())
 bb_access_s = bb_access_s.rename(columns={'blockpop_pct_of_state':'pctpopwBBacc_state'})
 bb_access_s['stateFIPS'] = bb_access_s.index
 
-
-
 #Table 12 - Percent of National Population with Broadband Access
 bb_access_n = pd.Series.to_frame(bb_access_bc.groupby(['stateFIPS'])['blockpop_pct_of_nation'].sum())
 bb_access_n = bb_access_n.rename(columns={'blockpop_pct_of_nation':'pctpopwBBacc_nat'})
 bb_access_n['stateFIPS'] = bb_access_n.index
-
-
 
 #Table 13 - Percent of Block Group Population with Broadband Download Speed Access >25Mbps
 bb_access_bc_ds_no_access = pd.concat([bb_avail_all_pop['stateFIPS'], bb_avail_all_pop['countyFIPS'],bb_avail_all_pop['BlockCode'],bb_avail_all_pop['blockpop_pct_of_county'],bb_avail_all_pop['blockpop_pct_of_state'],bb_avail_all_pop['blockpop_pct_of_nation'],bb_avail_all_pop['MaxAdDown'],bb_avail_all_pop['MaxAdUp']], axis=1)
@@ -124,7 +115,6 @@ bb_access_bc_ds_no_access['blockpop_pct_of_county'] = 0
 bb_access_bc_ds_no_access['blockpop_pct_of_state'] = 0
 bb_access_bc_ds_no_access['blockpop_pct_of_nation'] = 0
 
-
 bb_access_bc_ds = pd.concat([bb_avail_all_pop['stateFIPS'], bb_avail_all_pop['countyFIPS'],bb_avail_all_pop['BlockCode'],bb_avail_all_pop['blockpop_pct_of_county'],bb_avail_all_pop['blockpop_pct_of_state'],bb_avail_all_pop['blockpop_pct_of_nation'],bb_avail_all_pop['MaxAdDown'],bb_avail_all_pop['MaxAdUp']], axis=1)
 bb_access_bc_ds = bb_access_bc_ds[bb_access_bc_ds.MaxAdDown >= 25]
 bb_access_bc_ds = pd.concat([bb_avail_all_pop['stateFIPS'], bb_avail_all_pop['countyFIPS'],bb_avail_all_pop['BlockCode'],bb_avail_all_pop['blockpop_pct_of_county'],bb_avail_all_pop['blockpop_pct_of_state'],bb_avail_all_pop['blockpop_pct_of_nation']], axis=1)
@@ -132,28 +122,20 @@ bb_access_bc_ds = bb_access_bc_ds.drop_duplicates()
 
 bb_access_bc_ds = bb_access_bc_ds.append(bb_access_bc_no_acesss, ignore_index=True)
 
-
 #Table 14 - Percent of County Population with Broadband Download Speed Access >25Mbps
 bb_access_c_ds = pd.Series.to_frame(bb_access_bc_ds.groupby(['countyFIPS'])['blockpop_pct_of_county'].sum())
 bb_access_c_ds = bb_access_c_ds.rename(columns={'blockpop_pct_of_county':'pctpopwBBds_county'})
 bb_access_c_ds['countyFIPS'] = bb_access_c_ds.index
-
-
 
 #Table 15 - Percent of State Population with Broadband Download Speed Access >25Mbps
 bb_access_s_ds = pd.Series.to_frame(bb_access_bc_ds.groupby(['stateFIPS'])['blockpop_pct_of_state'].sum())
 bb_access_s_ds = bb_access_s_ds.rename(columns={'blockpop_pct_of_state':'pctpopwBBds_state'})
 bb_access_s_ds['stateFIPS'] = bb_access_s_ds.index
 
-
-
 #Table 16 - Percent of National Population with Broadband Download Speed Access >25Mbps
 bb_access_n_ds = pd.Series.to_frame(bb_access_bc.groupby(['stateFIPS'])['blockpop_pct_of_nation'].sum())
 bb_access_n_ds = bb_access_n_ds.rename(columns={'blockpop_pct_of_nation':'pctpopwBBds_nat'})
 bb_access_n_ds['stateFIPS'] = bb_access_n_ds.index
-
-
-
 
 #Table 17 - Percent of Block Group Population with Broadband Upload Speed Access >3Mbps
 bb_access_bc_us_no_access  = pd.concat([bb_avail_all_pop['stateFIPS'], bb_avail_all_pop['countyFIPS'],bb_avail_all_pop['BlockCode'],bb_avail_all_pop['blockpop_pct_of_county'],bb_avail_all_pop['blockpop_pct_of_state'],bb_avail_all_pop['blockpop_pct_of_nation'],bb_avail_all_pop['MaxAdDown'],bb_avail_all_pop['MaxAdUp']], axis=1)
@@ -162,7 +144,6 @@ bb_access_bc_us_no_access['blockpop_pct_of_county'] = 0
 bb_access_bc_us_no_access['blockpop_pct_of_state'] = 0
 bb_access_bc_us_no_access['blockpop_pct_of_nation'] = 0
 
-
 bb_access_bc_us = pd.concat([bb_avail_all_pop['stateFIPS'], bb_avail_all_pop['countyFIPS'],bb_avail_all_pop['BlockCode'],bb_avail_all_pop['blockpop_pct_of_county'],bb_avail_all_pop['blockpop_pct_of_state'],bb_avail_all_pop['blockpop_pct_of_nation'],bb_avail_all_pop['MaxAdDown'],bb_avail_all_pop['MaxAdUp']], axis=1)
 bb_access_bc_us = bb_access_bc_us[bb_access_bc_us.MaxAdUp >= 3]
 bb_access_bc_us = pd.concat([bb_avail_all_pop['stateFIPS'], bb_avail_all_pop['countyFIPS'],bb_avail_all_pop['BlockCode'],bb_avail_all_pop['blockpop_pct_of_county'],bb_avail_all_pop['blockpop_pct_of_state'],bb_avail_all_pop['blockpop_pct_of_nation']], axis=1)
@@ -170,28 +151,20 @@ bb_access_bc_us = bb_access_bc_us.drop_duplicates()
 
 bb_access_bc_us = bb_access_bc_us.append(bb_access_bc_us_no_access)
 
-
 #Table 18 - Percent of County Population with Broadband Upload Speed Access >3Mbps
 bb_access_c_us = pd.Series.to_frame(bb_access_bc_us.groupby(['countyFIPS'])['blockpop_pct_of_county'].sum())
 bb_access_c_us = bb_access_c_us.rename(columns={'blockpop_pct_of_county':'pctpopwBBus_county'})
 bb_access_c_us['countyFIPS'] = bb_access_c_us.index
-
-
-
 
 #Table 19 - Percent of State Population with Broadband Upload Speed Access >3Mbps
 bb_access_s_us = pd.Series.to_frame(bb_access_bc_ds.groupby(['stateFIPS'])['blockpop_pct_of_state'].sum())
 bb_access_s_us = bb_access_s_us.rename(columns={'blockpop_pct_of_state':'pctpopwBBus_state'})
 bb_access_s_us['stateFIPS'] = bb_access_s_us.index
 
-
-
-
 #Table 20 - Percent of National Population with Broadband Upload Speed Access >3Mbps
 bb_access_n_us = pd.Series.to_frame(bb_access_bc.groupby(['stateFIPS'])['blockpop_pct_of_nation'].sum())
 bb_access_n_us = bb_access_n_us.rename(columns={'blockpop_pct_of_nation':'pctpopwBBus_nat'})
 bb_access_n_us['stateFIPS'] = bb_access_n_us.index
-
 
 #Merge County Name and Population Data with Broadband Access Percentages
 bb_access_c['countyFIPS'] = bb_access_c['countyFIPS'].astype(str)
@@ -232,19 +205,9 @@ bb_avail_all_pop.to_csv(os.path.join('bb_avail_all_pop.csv'))
 ConsumerProviders = bb_avail_all_pop
 ConsumerProviders = ConsumerProviders.query("Consumer == 1")[['stateFIPS','countyFIPS','BlockCode','MaxAdDown','MaxAdUp','blockpop_pct_of_county','blockpop_pct_of_state','blockpop_pct_of_nation','gl_pop','CountyPop']]
 
-
 ## WRITE OUT TABLES FOR NEXT STEP **
 county_data.to_csv(os.path.join(workdir, r'countynameswithpcts.csv'), encoding='latin-1')
 ConsumerProviders.to_csv(os.path.join(workdir, r'ResultConsumerProviders.csv'), encoding='latin-1')
-
-import pandas as pd
-import signal
-import os
-import numpy
-os.chdir(r"/home/ec2-user/s3fs")
-workdir = r'/home/ec2-user/s3fs'
-pd.options.mode.chained_assignment = None  # default='warn'
-
 
 #Table 22 - Create Table of Download Speed Tiers and Assign County Percent of Population to each Tier
 ConsumerProviders = pd.read_csv(r'ResultConsumerProviders.csv')
@@ -337,14 +300,12 @@ DLspeed_tiers_hi_c['countyFIPS'] = DLspeed_tiers_hi_c['countyFIPS'].astype(int)
 DLspeed_tiers_hi_c = DLspeed_tiers_hi_c.rename(columns={'DS0_hi_c':'pctDS0_hi_c','DSGt0kAndLt1000k_hi_c':'pctDSGt0kAndLt1000k_hi_c','DSGt1000kAndLt3000k_hi_c':'pctDSGt1000kAndLt3000k_hi_c','DSGt4000kAndLt6000k_hi_c':'pctDSGt4000kAndLt6000k_hi_c','DSGt6000kAndLt10000k_hi_c':'pctDSGt6000kAndLt10000k_hi_c','DSGt10000kAndLt15000k_hi_c':'pctDSGt10000kAndLt15000k_hi_c','DSGt15000kAndLt25000k_hi_c':'pctDSGt15000kAndLt25000k_hi_c','DSGt25000kAndLt50000k_hi_c':'pctDSGt25000kAndLt50000k_hi_c','DSGt50000kAndLt100000k_hi_c':'pctDSGt50000kAndLt100000k_hi_c','DSGt100000kAndLt1Gig_hi_c':'pctDSGt100000kAndLt1Gig_hi_c','DSGt1Gig_hi_c':'pctDSGt1Gig_hi_c','DSGt3000kAndLt4000k_hi_c':'pctDSGt3000kAndLt4000k_hi_c'})
 DLspeed_tiers_hi_c = DLspeed_tiers_hi_c.fillna(0)
 
-
 #Table 23 - Sum Download Speed Tier Percentages of States
 DLspeed_tiers_hi_s = highestSpeedinBC_DL.groupby(['stateFIPS'])['DS0_hi_s','DSGt0kAndLt1000k_hi_s','DSGt1000kAndLt3000k_hi_s','DSGt3000kAndLt4000k_hi_s','DSGt4000kAndLt6000k_hi_s','DSGt6000kAndLt10000k_hi_s','DSGt10000kAndLt15000k_hi_s','DSGt15000kAndLt25000k_hi_s','DSGt25000kAndLt50000k_hi_s','DSGt50000kAndLt100000k_hi_s','DSGt100000kAndLt1Gig_hi_s','DSGt1Gig_hi_s'].sum()
 DLspeed_tiers_hi_s['stateFIPS'] = DLspeed_tiers_hi_s.index
 DLspeed_tiers_hi_s['stateFIPS'] = DLspeed_tiers_hi_s['stateFIPS'].astype(int)
 DLspeed_tiers_hi_s = DLspeed_tiers_hi_s.rename(columns={'DS0_hi_s':'pctDS0_hi_s','DSGt0kAndLt1000k_hi_s':'pctDSGt0kAndLt1000k_hi_s','DSGt1000kAndLt3000k_hi_s':'pctDSGt1000kAndLt3000k_hi_s','DSGt4000kAndLt6000k_hi_s':'pctDSGt4000kAndLt6000k_hi_s','DSGt6000kAndLt10000k_hi_s':'pctDSGt6000kAndLt10000k_hi_s','DSGt10000kAndLt15000k_hi_s':'pctDSGt10000kAndLt15000k_hi_s','DSGt15000kAndLt25000k_hi_s':'pctDSGt15000kAndLt25000k_hi_s','DSGt25000kAndLt50000k_hi_s':'pctDSGt25000kAndLt50000k_hi_s','DSGt50000kAndLt100000k_hi_s':'pctDSGt50000kAndLt100000k_hi_s','DSGt100000kAndLt1Gig_hi_s':'pctDSGt100000kAndLt1Gig_hi_s','DSGt1Gig_hi_s':'pctDSGt1Gig_hi_s','DSGt3000kAndLt4000k_hi_s':'pctDSGt3000kAndLt4000k_hi_s'})
 DLspeed_tiers_hi_s = DLspeed_tiers_hi_s.fillna(0)
-
 
 #Table 24 - Sum Download Speed Tier Percentages of Nation
 DLspeed_tiers_hi_n = highestSpeedinBC_DL.groupby(['merge_level'])['DS0_hi_n','DSGt0kAndLt1000k_hi_n','DSGt1000kAndLt3000k_hi_n','DSGt3000kAndLt4000k_hi_n','DSGt4000kAndLt6000k_hi_n','DSGt6000kAndLt10000k_hi_n','DSGt10000kAndLt15000k_hi_n','DSGt15000kAndLt25000k_hi_n','DSGt25000kAndLt50000k_hi_n','DSGt50000kAndLt100000k_hi_n','DSGt100000kAndLt1Gig_hi_n','DSGt1Gig_hi_n'].sum()
@@ -354,7 +315,6 @@ DLspeed_tiers_hi_n = DLspeed_tiers_hi_n.drop_duplicates()
 
 DLspeed_tiers_hi_c['countyFIPS'] = DLspeed_tiers_hi_c['countyFIPS'].apply('{:0>5}'.format).astype(int)
 DLspeed_tiers_hi_s['stateFIPS'] = DLspeed_tiers_hi_s['stateFIPS'].apply('{:0>2}'.format).astype(int)
-
 
 DLspeed_tiers_hi_s.to_csv(os.path.join(workdir, r'DLspeed_tiers_hi_s.csv'), encoding='utf-8')
 DLspeed_tiers_hi_c.to_csv(os.path.join(workdir, r'DLspeed_tiers_hi_c.csv'), encoding='utf-8')
@@ -448,8 +408,6 @@ highestSpeedinBC_UL.USGt1Gig_hi_c = ConsumerProviders.blockpop_pct_of_county.whe
 highestSpeedinBC_UL.USGt1Gig_hi_s = ConsumerProviders.blockpop_pct_of_state.where((ConsumerProviders.MaxAdUp >= 1000))
 highestSpeedinBC_UL.USGt1Gig_hi_n = ConsumerProviders.blockpop_pct_of_nation.where((ConsumerProviders.MaxAdUp >= 1000))
 
-highestSpeedinBC_UL.to_csv(os.path.join('seeULblocks.csv'))
-
 #Table 25 - Sum Upload Speed Tier Percentages of Counties
 ULspeed_tiers_hi_c = highestSpeedinBC_UL.groupby(['countyFIPS'])['US0_hi_c','USGt0kAndLt1000k_hi_c','USGt1000kAndLt3000k_hi_c','USGt3000kAndLt4000k_hi_c','USGt4000kAndLt6000k_hi_c','USGt6000kAndLt10000k_hi_c','USGt10000kAndLt15000k_hi_c','USGt15000kAndLt25000k_hi_c','USGt25000kAndLt50000k_hi_c','USGt50000kAndLt100000k_hi_c','USGt100000kAndLt1Gig_hi_c','USGt1Gig_hi_c'].sum()
 ULspeed_tiers_hi_c['countyFIPS'] = ULspeed_tiers_hi_c.index
@@ -457,14 +415,12 @@ ULspeed_tiers_hi_c['countyFIPS'] = ULspeed_tiers_hi_c['countyFIPS'].astype(int)
 ULspeed_tiers_hi_c = ULspeed_tiers_hi_c.rename(columns={'US0_hi_c':'pctUS0_hi_c','USGt0kAndLt1000k_hi_c':'pctUSGt0kAndLt1000k_hi_c','USGt1000kAndLt3000k_hi_c':'pctUSGt1000kAndLt3000k_hi_c','USGt4000kAndLt6000k_hi_c':'pctUSGt4000kAndLt6000k_hi_c','USGt6000kAndLt10000k_hi_c':'pctUSGt6000kAndLt10000k_hi_c','USGt10000kAndLt15000k_hi_c':'pctUSGt10000kAndLt15000k_hi_c','USGt15000kAndLt25000k_hi_c':'pctUSGt15000kAndLt25000k_hi_c','USGt25000kAndLt50000k_hi_c':'pctUSGt25000kAndLt50000k_hi_c','USGt50000kAndLt100000k_hi_c':'pctUSGt50000kAndLt100000k_hi_c','USGt100000kAndLt1Gig_hi_c':'pctUSGt100000kAndLt1Gig_hi_c','USGt1Gig_hi_c':'pctUSGt1Gig_hi_c','USGt3000kAndLt4000k_hi_c':'pctUSGt3000kAndLt4000k_hi_c'})
 ULspeed_tiers_hi_c = ULspeed_tiers_hi_c.fillna(0)
 
-
 #Table 26 - Sum Upload Speed Tier Percentages of States
 ULspeed_tiers_hi_s = highestSpeedinBC_UL.groupby(['stateFIPS'])['US0_hi_s','USGt0kAndLt1000k_hi_s','USGt1000kAndLt3000k_hi_s','USGt3000kAndLt4000k_hi_s','USGt4000kAndLt6000k_hi_s','USGt6000kAndLt10000k_hi_s','USGt10000kAndLt15000k_hi_s','USGt15000kAndLt25000k_hi_s','USGt25000kAndLt50000k_hi_s','USGt50000kAndLt100000k_hi_s','USGt100000kAndLt1Gig_hi_s','USGt1Gig_hi_s'].sum()
 ULspeed_tiers_hi_s['stateFIPS'] = ULspeed_tiers_hi_s.index
 ULspeed_tiers_hi_s['stateFIPS'] = ULspeed_tiers_hi_s['stateFIPS'].astype(int)
 ULspeed_tiers_hi_s = ULspeed_tiers_hi_s.rename(columns={'US0_hi_s':'pctUS0_hi_s','USGt0kAndLt1000k_hi_s':'pctUSGt0kAndLt1000k_hi_s','USGt1000kAndLt3000k_hi_s':'pctUSGt1000kAndLt3000k_hi_s','USGt4000kAndLt6000k_hi_s':'pctUSGt4000kAndLt6000k_hi_s','USGt6000kAndLt10000k_hi_s':'pctUSGt6000kAndLt10000k_hi_s','USGt10000kAndLt15000k_hi_s':'pctUSGt10000kAndLt15000k_hi_s','USGt15000kAndLt25000k_hi_s':'pctUSGt15000kAndLt25000k_hi_s','USGt25000kAndLt50000k_hi_s':'pctUSGt25000kAndLt50000k_hi_s','USGt50000kAndLt100000k_hi_s':'pctUSGt50000kAndLt100000k_hi_s','USGt100000kAndLt1Gig_hi_s':'pctUSGt100000kAndLt1Gig_hi_s','USGt1Gig_hi_s':'pctUSGt1Gig_hi_s','USGt3000kAndLt4000k_hi_s':'pctUSGt3000kAndLt4000k_hi_s'})
 ULspeed_tiers_hi_s = ULspeed_tiers_hi_s.fillna(0)
-
 
 #Table 27 - Sum Upload Speed Tier Percentages of Nation
 ULspeed_tiers_hi_n = highestSpeedinBC_UL.groupby(['merge_level'])['US0_hi_n','USGt0kAndLt1000k_hi_n','USGt1000kAndLt3000k_hi_n','USGt3000kAndLt4000k_hi_n','USGt4000kAndLt6000k_hi_n','USGt6000kAndLt10000k_hi_n','USGt10000kAndLt15000k_hi_n','USGt15000kAndLt25000k_hi_n','USGt25000kAndLt50000k_hi_n','USGt50000kAndLt100000k_hi_n','USGt100000kAndLt1Gig_hi_n','USGt1Gig_hi_n'].sum()
@@ -474,7 +430,6 @@ ULspeed_tiers_hi_n['merge_level'] = 'national'
 
 ULspeed_tiers_hi_c['countyFIPS'] = ULspeed_tiers_hi_c['countyFIPS'].apply('{:0>5}'.format).astype(int)
 ULspeed_tiers_hi_s['stateFIPS'] = ULspeed_tiers_hi_s['stateFIPS'].apply('{:0>2}'.format).astype(int)
-
 
 ULspeed_tiers_hi_s.to_csv(os.path.join(workdir, r'ULspeed_tiers_hi_s.csv'), encoding='utf-8')
 ULspeed_tiers_hi_c.to_csv(os.path.join(workdir, r'ULspeed_tiers_hi_c.csv'), encoding='utf-8')
@@ -489,14 +444,6 @@ county_data_mcspeeds = county_data.copy()
 
 ## WRITE OUT TABLE FOR NEXT STEP ##
 county_data_mcspeeds.to_csv(os.path.join(workdir, r'county_data_mcspeeds.csv'), encoding='utf-8')
-
-import pandas as pd
-import signal
-import os
-import numpy
-os.chdir(r"/home/ec2-user/s3fs")
-workdir = r'/home/ec2-user/s3fs'
-pd.options.mode.chained_assignment = None  # default='warn'
 
 county_data_mcspeeds = pd.read_csv(r'county_data_mcspeeds.csv')
 
@@ -521,22 +468,14 @@ county_data_mcspeeds['mcus_tier_n'] = county_data_mcspeeds[['pctUS0_hi_n','pctUS
 county_data_mcspeeds['totalDSPCT'] = county_data_mcspeeds['pctDS0_hi_c']+county_data_mcspeeds['pctDSGt0kAndLt1000k_hi_c']+county_data_mcspeeds['pctDSGt1000kAndLt3000k_hi_c']+county_data_mcspeeds['pctDSGt3000kAndLt4000k_hi_c']+county_data_mcspeeds['pctDSGt4000kAndLt6000k_hi_c']+county_data_mcspeeds['pctDSGt6000kAndLt10000k_hi_c']+county_data_mcspeeds['pctDSGt10000kAndLt15000k_hi_c']+county_data_mcspeeds['pctDSGt15000kAndLt25000k_hi_c']+county_data_mcspeeds['pctDSGt25000kAndLt50000k_hi_c']+county_data_mcspeeds['pctDSGt50000kAndLt100000k_hi_c']+county_data_mcspeeds['pctDSGt100000kAndLt1Gig_hi_c']+county_data_mcspeeds['pctDSGt1Gig_hi_c']
 county_data_mcspeeds['totalUSPCT'] = county_data_mcspeeds['pctUS0_hi_c']+county_data_mcspeeds['pctUSGt0kAndLt1000k_hi_c']+county_data_mcspeeds['pctUSGt1000kAndLt3000k_hi_c']+county_data_mcspeeds['pctUSGt3000kAndLt4000k_hi_c']+county_data_mcspeeds['pctUSGt4000kAndLt6000k_hi_c']+county_data_mcspeeds['pctUSGt6000kAndLt10000k_hi_c']+county_data_mcspeeds['pctUSGt10000kAndLt15000k_hi_c']+county_data_mcspeeds['pctUSGt15000kAndLt25000k_hi_c']+county_data_mcspeeds['pctUSGt25000kAndLt50000k_hi_c']+county_data_mcspeeds['pctUSGt50000kAndLt100000k_hi_c']+county_data_mcspeeds['pctUSGt100000kAndLt1Gig_hi_c']+county_data_mcspeeds['pctUSGt1Gig_hi_c']
 
+county_data_mcspeeds['totalDSPCT'] = county_data_mcspeeds['totalDSPCT']/100
+county_data_mcspeeds['totalUSPCT'] = county_data_mcspeeds['totalUSPCT']/100
 
 ## WRITE OUT TABLE FOR NEXT STEP ##
 county_data_mcspeeds.to_csv(os.path.join(workdir, r'county_data_mcspeeds.csv'), encoding='utf-8')
 
-import pandas as pd
-import signal
-import os
-import sys
-import numpy
-import functools as func
-os.chdir(r"/home/ec2-user/s3fs")
-workdir = r'/home/ec2-user/s3fs'
-pd.options.mode.chained_assignment = None  # default='warn'
 
 natlbb_pop = pd.read_csv(r'NatlbbWithPopulation.csv', usecols = ['Consumer','Business','BlockCode','HocoNum','countyFIPS','stateFIPS'])
-
 
 #Tables 29:31 - Create Tables of Block Code Provider Count
 freq_prov_c = natlbb_pop.query("Consumer == 1").groupby(['BlockCode']).HocoNum.nunique().reset_index().rename(columns = {'HocoNum':'prov_cons'})
@@ -580,10 +519,6 @@ provcount_nat_a['merge_level'] = 'national'
 natcount = [provcount_nat_c,provcount_nat_b,provcount_nat_a]
 provcount_nat_total = func.reduce(lambda left,right: pd.merge(left,right,on='merge_level'), natcount)
 
-#provcount_cnty_total['provcount_cnty_a'] = provcount_cnty_total['provcount_cnty_b'] + provcount_cnty_total['provcount_cnty_c']
-#provcount_state_total['provcount_state_a'] = provcount_state_total['provcount_state_b'] + provcount_state_total['provcount_state_c']
-#provcount_nat_total['provcount_nat_a'] = provcount_nat_total['provcount_nat_b'] + provcount_nat_total['provcount_nat_c']
-
 ## WRITE OUT TABLE FOR NEXT STEP ##
 
 provcount_nat_total.to_csv(os.path.join(workdir, r'provcount_nat_total.csv'), encoding='utf-8')
@@ -592,15 +527,6 @@ provcount_state_total.to_csv(os.path.join(workdir, r'provcount_state_total.csv')
 freq_prov_c.to_csv(os.path.join(workdir, r'freq_prov_c.csv'), encoding='utf-8')
 freq_prov_b.to_csv(os.path.join(workdir, r'freq_prov_b.csv'), encoding='utf-8')
 freq_prov_a.to_csv(os.path.join(workdir, r'freq_prov_a.csv'), encoding='utf-8')
-
-import pandas as pd
-import signal
-import os
-import numpy
-import functools as func
-os.chdir(r"/home/ec2-user/s3fs")
-workdir = r'/home/ec2-user/s3fs'
-pd.options.mode.chained_assignment = None  # default='warn'
 
 freq_prov_b = pd.read_csv(r'freq_prov_b.csv')
 freq_prov_c = pd.read_csv(r'freq_prov_c.csv')
@@ -626,20 +552,10 @@ county_data['merge_level'] = 'national'
 county_data = county_data.merge(provcount_nat_total, on='merge_level')
 county_data_final_hi_common = county_data.copy()
 
-
 ## WRITE OUT TABLES FOR NEXT STEP ##
 
 county_data_final_hi_common.to_csv(os.path.join(workdir, r'county_data_final_hi_common.csv'), encoding='utf-8')
 num_provs.to_csv(os.path.join(workdir, r'num_provs.csv'), encoding='utf-8')
-
-import pandas as pd
-import signal
-import os
-import numpy
-import functools as func
-os.chdir(r"/home/ec2-user/s3fs")
-workdir = r'/home/ec2-user/s3fs'
-pd.options.mode.chained_assignment = None  # default='warn'
 
 num_provs = pd.read_csv(r'num_provs.csv')
 num_provs = num_provs[['BlockCode','prov_cons','prov_bus','prov_all','countyFIPS','stateFIPS','blockpop_pct_of_county','blockpop_pct_of_state','blockpop_pct_of_nation','gl_pop','CountyPop']]
@@ -677,9 +593,9 @@ num_provs['prov_cnty_c_7'] = num_provs.query('prov_cons == 7')['blockpop_pct_of_
 num_provs['prov_state_c_7'] = num_provs.query('prov_cons == 7')['blockpop_pct_of_state']
 num_provs['prov_nat_c_7'] = num_provs.query('prov_cons == 7')['blockpop_pct_of_nation']
 
-num_provs['prov_cnty_greq_c_8'] = num_provs.query('prov_cons == 8')['blockpop_pct_of_county']
-num_provs['prov_state_greq_c_8'] = num_provs.query('prov_cons == 8')['blockpop_pct_of_state']
-num_provs['prov_nat_greq_c_8'] = num_provs.query('prov_cons == 8')['blockpop_pct_of_nation']
+num_provs['prov_cnty_greq_c_8'] = num_provs.query('prov_cons >= 8')['blockpop_pct_of_county']
+num_provs['prov_state_greq_c_8'] = num_provs.query('prov_cons >= 8')['blockpop_pct_of_state']
+num_provs['prov_nat_greq_c_8'] = num_provs.query('prov_cons >= 8')['blockpop_pct_of_nation']
 
 num_provs['prov_cnty_b_0'] = num_provs.query('prov_bus == 0')['blockpop_pct_of_county']
 num_provs['prov_state_b_0'] = num_provs.query('prov_bus == 0')['blockpop_pct_of_state']
@@ -713,9 +629,9 @@ num_provs['prov_cnty_b_7'] = num_provs.query('prov_bus == 7')['blockpop_pct_of_c
 num_provs['prov_state_b_7'] = num_provs.query('prov_bus == 7')['blockpop_pct_of_state']
 num_provs['prov_nat_b_7'] = num_provs.query('prov_bus == 7')['blockpop_pct_of_nation']
 
-num_provs['prov_cnty_greq_b_8'] = num_provs.query('prov_bus == 8')['blockpop_pct_of_county']
-num_provs['prov_state_greq_b_8'] = num_provs.query('prov_bus == 8')['blockpop_pct_of_state']
-num_provs['prov_nat_greq_b_8'] = num_provs.query('prov_bus == 8')['blockpop_pct_of_nation']
+num_provs['prov_cnty_greq_b_8'] = num_provs.query('prov_bus >= 8')['blockpop_pct_of_county']
+num_provs['prov_state_greq_b_8'] = num_provs.query('prov_bus >= 8')['blockpop_pct_of_state']
+num_provs['prov_nat_greq_b_8'] = num_provs.query('prov_bus >= 8')['blockpop_pct_of_nation']
 
 num_provs['prov_cnty_a_0'] = num_provs.query('prov_all == 0')['blockpop_pct_of_county']
 num_provs['prov_state_a_0'] = num_provs.query('prov_all == 0')['blockpop_pct_of_state']
@@ -749,23 +665,14 @@ num_provs['prov_cnty_a_7'] = num_provs.query('prov_all == 7')['blockpop_pct_of_c
 num_provs['prov_state_a_7'] = num_provs.query('prov_all == 7')['blockpop_pct_of_state']
 num_provs['prov_nat_a_7'] = num_provs.query('prov_all == 7')['blockpop_pct_of_nation']
 
-num_provs['prov_cnty_greq_a_8'] = num_provs.query('prov_all == 8')['blockpop_pct_of_county']
-num_provs['prov_state_greq_a_8'] = num_provs.query('prov_all == 8')['blockpop_pct_of_state']
-num_provs['prov_nat_greq_a_8'] = num_provs.query('prov_all == 8')['blockpop_pct_of_nation']
+num_provs['prov_cnty_greq_a_8'] = num_provs.query('prov_all >= 8')['blockpop_pct_of_county']
+num_provs['prov_state_greq_a_8'] = num_provs.query('prov_all >= 8')['blockpop_pct_of_state']
+num_provs['prov_nat_greq_a_8'] = num_provs.query('prov_all >= 8')['blockpop_pct_of_nation']
 
 
 ## WRITE OUT TABLES FOR NEXT STEP ##
 
 num_provs.to_csv(os.path.join(workdir, r'num_provs.csv'), encoding='utf-8')
-
-import pandas as pd
-import signal
-import os
-import numpy
-import functools as func
-os.chdir(r"/home/ec2-user/s3fs")
-workdir = r'/home/ec2-user/s3fs'
-pd.options.mode.chained_assignment = None  # default='warn'
 
 num_provs = pd.read_csv(r'num_provs.csv')
 num_provs['merge_level'] = 'national'
@@ -787,7 +694,6 @@ num_provs_a_nat = num_provs.groupby(['merge_level'], as_index = False)['prov_nat
 num_provs_a_nat['merge_level'] = 'national'
 num_provs_a_nat.to_csv(os.path.join(workdir, r'num_provs_a_nat.csv'), encoding='utf-8')
 
-
 num_provs_b_county = num_provs.groupby(['countyFIPS'])["prov_cnty_b_0","prov_cnty_b_1","prov_cnty_b_2","prov_cnty_b_3","prov_cnty_b_4","prov_cnty_b_5","prov_cnty_b_6","prov_cnty_b_7","prov_cnty_greq_b_8"].apply(lambda x : x.astype(float).sum()).rename(columns={'prov_cnty_b_0':'sum_prov_cnty_b_0','prov_cnty_b_1':'sum_prov_cnty_b_1','prov_cnty_b_2':'sum_prov_cnty_b_2','prov_cnty_b_3':'sum_prov_cnty_b_3','prov_cnty_b_4':'sum_prov_cnty_b_4','prov_cnty_b_5':'sum_prov_cnty_b_5','prov_cnty_b_6':'sum_prov_cnty_b_6','prov_cnty_b_7':'sum_prov_cnty_b_7','prov_cnty_greq_b_8':'sum_prov_cnty_greq_b_8'})
 num_provs_b_county = num_provs_b_county.reset_index()
 num_provs_b_county_join_fields = num_provs[['stateFIPS','CountyPop','countyFIPS']].drop_duplicates()
@@ -805,7 +711,6 @@ num_provs_b_nat = num_provs.groupby(['merge_level'], as_index = False)['prov_nat
 num_provs_b_nat['merge_level'] = 'national'
 num_provs_b_nat.to_csv(os.path.join(workdir, r'num_provs_b_nat.csv'), encoding='utf-8')
 
-
 num_provs_c_county = num_provs.groupby(['countyFIPS'])["prov_cnty_c_0","prov_cnty_c_1","prov_cnty_c_2","prov_cnty_c_3","prov_cnty_c_4","prov_cnty_c_5","prov_cnty_c_6","prov_cnty_c_7","prov_cnty_greq_c_8"].apply(lambda x : x.astype(float).sum()).rename(columns={'prov_cnty_c_0':'sum_prov_cnty_c_0','prov_cnty_c_1':'sum_prov_cnty_c_1','prov_cnty_c_2':'sum_prov_cnty_c_2','prov_cnty_c_3':'sum_prov_cnty_c_3','prov_cnty_c_4':'sum_prov_cnty_c_4','prov_cnty_c_5':'sum_prov_cnty_c_5','prov_cnty_c_6':'sum_prov_cnty_c_6','prov_cnty_c_7':'sum_prov_cnty_c_7','prov_cnty_greq_c_8':'sum_prov_cnty_greq_c_8'})
 num_provs_c_county = num_provs_c_county.reset_index()
 num_provs_c_county_join_fields = num_provs[['stateFIPS','CountyPop','countyFIPS']].drop_duplicates()
@@ -822,15 +727,6 @@ num_provs_c_state.to_csv(os.path.join(workdir, r'num_provs_c_state.csv'), encodi
 num_provs_c_nat = num_provs.groupby(['merge_level'], as_index = False)['prov_nat_c_0','prov_nat_c_1','prov_nat_c_2','prov_nat_c_3','prov_nat_c_4','prov_nat_c_5','prov_nat_c_6','prov_nat_c_7','prov_nat_greq_c_8'].apply(lambda x : x.astype(float).sum()).rename(columns={'prov_nat_c_0':'sum_prov_nat_c_0','prov_nat_c_1':'sum_prov_nat_c_1','prov_nat_c_2':'sum_prov_nat_c_2','prov_nat_c_3':'sum_prov_nat_c_3','prov_nat_c_4':'sum_prov_nat_c_4','prov_nat_c_5':'sum_prov_nat_c_5','prov_nat_c_6':'sum_prov_nat_c_6','prov_nat_c_7':'sum_prov_nat_c_7','prov_nat_greq_c_8':'sum_prov_nat_greq_c_8'})
 num_provs_c_nat['merge_level'] = 'national'
 num_provs_c_nat.to_csv(os.path.join(workdir, r'num_provs_c_nat.csv'), encoding='utf-8')
-
-import pandas as pd
-import signal
-import os
-import numpy
-import functools as func
-os.chdir(r"/home/ec2-user/s3fs")
-workdir = r'/home/ec2-user/s3fs'
-pd.options.mode.chained_assignment = None  # default='warn'
 
 num_provs_c_county = pd.read_csv('num_provs_c_county.csv')
 num_provs_b_county = pd.read_csv('num_provs_b_county.csv')
@@ -877,19 +773,8 @@ county_data_cumm_provs = county_data_num_provs.copy()
 #Table 61 - Create Copy of county_data_num_provs for Cumulative Provider Columns
 county_data_cumm_provs = county_data_num_provs.copy()
 
-
 ## WRITE TABLES FOR NEXT STEP ## 
 county_data_cumm_provs.to_csv(os.path.join(workdir, r'county_data_cumm_provs.csv'), encoding='utf-8')
-
-import pandas as pd
-import signal
-import os
-import numpy
-import functools as func
-os.chdir(r"/home/ec2-user/s3fs")
-workdir = r'/home/ec2-user/s3fs'
-pd.options.mode.chained_assignment = None  # default='warn'
-
 
 county_data_cumm_provs = pd.read_csv('county_data_cumm_provs.csv')
 county_data_cumm_provs = county_data_cumm_provs.fillna(0)
@@ -1151,15 +1036,71 @@ county_data_cumm_provs.loc[(county_data_cumm_provs['cumm_prov_nat_a_6'] < 0.5) &
 county_data_cumm_provs.loc[(county_data_cumm_provs['cumm_prov_nat_a_7'] < 0.5) & (county_data_cumm_provs['cumm_prov_nat_a_8'] >= 0.5), 'lb'] = 'cumm_prov_nat_a_7'
 county_data_cumm_provs.loc[(county_data_cumm_provs['cumm_prov_nat_a_7'] < 0.5) & (county_data_cumm_provs['cumm_prov_nat_a_8'] >= 0.5), 'cumm_prov_nat_a_50th'] = 7 + ((0.5 - county_data_cumm_provs['cumm_prov_nat_a_7']) / (county_data_cumm_provs['cumm_prov_nat_a_8'] - county_data_cumm_provs['cumm_prov_nat_a_7']))
 
-
 county_data_cumm_provs['dsgteq25_c'] = county_data_cumm_provs['pctDSGt25000kAndLt50000k_hi_c'] + county_data_cumm_provs['pctDSGt50000kAndLt100000k_hi_c'] + county_data_cumm_provs['pctDSGt100000kAndLt1Gig_hi_c'] + county_data_cumm_provs['pctDSGt1Gig_hi_c']
 county_data_cumm_provs['dsgteq25_s'] = county_data_cumm_provs['pctDSGt25000kAndLt50000k_hi_s'] + county_data_cumm_provs['pctDSGt50000kAndLt100000k_hi_s'] + county_data_cumm_provs['pctDSGt100000kAndLt1Gig_hi_s'] + county_data_cumm_provs['pctDSGt1Gig_hi_s']
 county_data_cumm_provs['dsgteq25_n'] = county_data_cumm_provs['pctDSGt25000kAndLt50000k_hi_n'] + county_data_cumm_provs['pctDSGt50000kAndLt100000k_hi_n'] + county_data_cumm_provs['pctDSGt100000kAndLt1Gig_hi_n'] + county_data_cumm_provs['pctDSGt1Gig_hi_n']
 
-
 county_data_cumm_provs['usgteq3_c'] = county_data_cumm_provs['pctUSGt3000kAndLt4000k_hi_c'] + county_data_cumm_provs['pctUSGt4000kAndLt6000k_hi_c'] + county_data_cumm_provs['pctUSGt6000kAndLt10000k_hi_c'] + county_data_cumm_provs['pctUSGt10000kAndLt15000k_hi_c'] + county_data_cumm_provs['pctUSGt15000kAndLt25000k_hi_c'] + county_data_cumm_provs['pctUSGt25000kAndLt50000k_hi_c'] + county_data_cumm_provs['pctUSGt50000kAndLt100000k_hi_c'] + county_data_cumm_provs['pctUSGt100000kAndLt1Gig_hi_c'] + county_data_cumm_provs['pctUSGt1Gig_hi_c']
 county_data_cumm_provs['usgteq3_s'] = county_data_cumm_provs['pctUSGt3000kAndLt4000k_hi_s'] + county_data_cumm_provs['pctUSGt4000kAndLt6000k_hi_s'] + county_data_cumm_provs['pctUSGt6000kAndLt10000k_hi_s'] + county_data_cumm_provs['pctUSGt10000kAndLt15000k_hi_s'] + county_data_cumm_provs['pctUSGt15000kAndLt25000k_hi_s'] + county_data_cumm_provs['pctUSGt25000kAndLt50000k_hi_s'] + county_data_cumm_provs['pctUSGt50000kAndLt100000k_hi_s'] + county_data_cumm_provs['pctUSGt100000kAndLt1Gig_hi_s'] + county_data_cumm_provs['pctUSGt1Gig_hi_s']
 county_data_cumm_provs['usgteq3_n'] = county_data_cumm_provs['pctUSGt3000kAndLt4000k_hi_n'] + county_data_cumm_provs['pctUSGt4000kAndLt6000k_hi_n'] + county_data_cumm_provs['pctUSGt6000kAndLt10000k_hi_n'] + county_data_cumm_provs['pctUSGt10000kAndLt15000k_hi_n'] + county_data_cumm_provs['pctUSGt15000kAndLt25000k_hi_n'] + county_data_cumm_provs['pctUSGt25000kAndLt50000k_hi_n'] + county_data_cumm_provs['pctUSGt50000kAndLt100000k_hi_n'] + county_data_cumm_provs['pctUSGt100000kAndLt1Gig_hi_n'] + county_data_cumm_provs['pctUSGt1Gig_hi_n']
+
+county_data_cumm_provs.to_csv(os.path.join(workdir, r'county_data_cumm_provs.csv'), encoding='utf-8')
+
+county_data_cumm_provs = pd.read_csv('county_data_cumm_provs.csv')
+county_data_cumm_provs['merge_level'] = 'national'
+
+
+adoption_dec2016_county = pd.read_csv('adoption_dec2016_county.csv')
+adoption_dec2016_state = pd.read_csv('adoption_dec2016_state.csv')
+adoption_dec2016_nat = pd.read_csv('adoption_dec2016_nat.csv')
+
+
+county_data_cumm_provs = county_data_cumm_provs.merge(adoption_dec2016_county, how='left', on = 'countyFIPS')
+county_data_cumm_provs = county_data_cumm_provs.merge(adoption_dec2016_state, how='left', on = 'stateFIPS')
+county_data_cumm_provs = county_data_cumm_provs.merge(adoption_dec2016_nat, how='left', on = 'merge_level')
+county_data_cumm_provs.to_csv(os.path.join(workdir, r'accessandadoption2016.csv'))
+accessandadoption2016 = county_data_cumm_provs
+
+#Table 67 - Read in Broadband Progress Report
+
+bpr_2018_c = pd.read_csv(r'bpr_2018_c.csv', encoding = 'latin-1' )
+bpr_2018_s = pd.read_csv(r'bpr_2018_s.csv', encoding = 'latin-1' )
+bpr_2018_n = pd.read_csv(r'bpr_2018_n.csv', encoding = 'latin-1' )
+
+accessandadoption2016 = accessandadoption2016.merge(bpr_2018_c, how='left', on='countyFIPS')
+accessandadoption2016 = accessandadoption2016.merge(bpr_2018_s, how='left', on='stateFIPS')
+accessandadoption2016 = accessandadoption2016.merge(bpr_2018_n, how='left', on='merge_level')
+
+accessandadoption2016.to_csv(os.path.join(workdir, r'accessandadoption2016_bpr.csv'))
+
+accessandadoption_2016 = pd.read_csv('accessandadoption2016_bpr.csv', low_memory=False)
+accessandadoption_2016['less_than_zero'] = ''
+
+if (accessandadoption_2016['pctpopwoBBacc_county'] < 0).any():
+    accessandadoption_2016['less_than_zero'] = 1
+else:
+    accessandadoption_2016['less_than_zero'] = 0
+    
+accessandadoption_2016['totalpct'] = accessandadoption_2016['pctpopwoBBacc_county'] + accessandadoption_2016['pctpopwBBacc_county']
+
+income_c = pd.read_csv(r'SAIPE_income_c.csv', skiprows =3)
+income_c = income_c[['State FIPS Code','County FIPS Code','Postal Code','Poverty Estimate, All Ages','Median Household Income']].rename(columns={'countyFIPS':'countyFIPS_int','stateFIPS':'stateFIPS_int','Postal Code':'PostalCode','Poverty Estimate, All Ages':'poverty_allages_c','Median Household Income':'medianHHinc_c'})
+income_c['County FIPS Code'] = income_c['County FIPS Code'].apply(lambda x: '{0:0>3}'.format(x))
+income_c['countyFIPS'] = income_c['State FIPS Code'].astype(str)+income_c['County FIPS Code'].astype(str)
+income_c['countyFIPS'] = income_c['countyFIPS'].astype(int)
+income_c = income_c[['countyFIPS', 'poverty_allages_c', 'medianHHinc_c']]
+income_c.to_csv(os.path.join(workdir, r'income_c2.csv'))
+accessandadoption_2016 = income_c.merge(accessandadoption_2016, how='left', on='countyFIPS')
+
+income_s = pd.read_csv(r'SAIPE_income_s.csv', skiprows =3)
+income_s = income_s[['State FIPS Code','Poverty Estimate, All Ages','Median Household Income']].rename(columns={'State FIPS Code':'stateFIPS','Poverty Estimate, All Ages':'poverty_allages_s','Median Household Income':'medianHHinc_s'})
+accessandadoption_2016 = income_s.merge(accessandadoption_2016, how='left', on='stateFIPS')
+
+income_n = pd.read_csv(r'SAIPE_income_n.csv', skiprows = 2)
+income_n = income_n[['merge_level','Poverty Estimate, All Ages','Median Household Income']].rename(columns={'Poverty Estimate, All Ages':'poverty_allages_n','Median Household Income':'medianHHinc_n'})
+accessandadoption_2016 = income_n.merge(accessandadoption_2016, how='inner', on='merge_level')
+
+accessandadoption_2016.to_csv(os.path.join(workdir, r'accessandadoption2016_BPR_SAIPE.csv'))
 
 county_data_cumm_provs = pd.read_csv('county_data_cumm_provs.csv')
 file = county_data_cumm_provs
@@ -1554,7 +1495,7 @@ CHR2018_c.PCPRatio_c = CHR2018_c.PCPRatio_c.str.split(':').str[0]
 CHR2018_c['PopToDentistsRatio_c'] = CHR2018_c.DentistsRatio_c.str.split(':').str[0]
 CHR2018_c.DentistsRatio_c = CHR2018_c.DentistsRatio_c.str.split(':').str[0]
 
-CHR2018_c['PopToMHPRRatio_c'] = CHR2018_c.MHPRatio_c.str.split(':').str[0]
+CHR2018_c['PopToMHPRatio_c'] = CHR2018_c.MHPRatio_c.str.split(':').str[0]
 CHR2018_c.MHPRatio_c = CHR2018_c.MHPRatio_c.str.split(':').str[0]
 
 
@@ -1564,15 +1505,15 @@ CHR2018_s = CHR2018_c.groupby(['stateFIPS'])
 # Read in County Health Ranking Trends for Years of Life Lost County, State, National 
 
 YPLL_s = pd.read_csv('CHR_TRENDS_CSV_2018.csv', low_memory = False, encoding='latin-1')
-YPLL_n = YPLL_s.loc[YPLL['county'] == 'United States']
-YPLL_n = YPLL_n.loc[YPLL['chrreleaseyear'] == 2018]
+YPLL_n = YPLL_s.loc[YPLL_s['county'] == 'United States']
+YPLL_n = YPLL_n.loc[YPLL_n['chrreleaseyear'] == 2018]
 YPLL_n['merge_level'] = 'national'
-YPLL_s = YPLL.loc[YPLL['countycode'] == 0]
-YPLL_s = YPLL.loc[YPLL['measurename'] == 'Premature death']
-YPLL_s = YPLL.loc[YPLL['chrreleaseyear'] == 2018]
+YPLL_s = YPLL_s.loc[YPLL_s['countycode'] == 0]
+YPLL_s = YPLL_s.loc[YPLL_s['measurename'] == 'Premature death']
+YPLL_s = YPLL_s.loc[YPLL_s['chrreleaseyear'] == 2018]
 YPLL_s = YPLL_s[['statecode','measurename']]
 YPLL_s = YPLL_s.rename(columns={'measurename':'years_lost_per_100000_state','statecode':'stateFIPS'})
-YPLL_s['statecode'] = YPLL_s['stateFIPS'].apply(lambda x: '{0:0>2}'.format(x))
+YPLL_s['stateFIPS'] = YPLL_s['stateFIPS'].apply(lambda x: '{0:0>2}'.format(x))
 
 # Merge County, State and National Adoption Files
 file = file.merge(AdoptionCounty, how='left', on='countyFIPS')
@@ -1589,307 +1530,8 @@ file = file.merge(OMB, how='left', on='countyFIPS')
 file = file.merge(ERS, how='left', on='countyFIPS')
 file = file.merge(NCHS, how='left', on='countyFIPS')
 file = file.merge(CHR2018_c, how='left', on='countyFIPS')
+file = file.rename(columns={'stateFIPS_x':'stateFIPS'})
+YPLL_s['stateFIPS'] = YPLL_s['stateFIPS'].astype(int)
 file = file.merge(YPLL_s, how='left', on='stateFIPS')
 file = file.merge(YPLL_n, how='left', on='merge_level')
-file.to_csv(os.path.join('see.csv'))
-
-
-## Add County Value with Only County Name and the the Word County
-file['county'] = file['COUNTYNAME_x'].str.replace('County','')
-
-## Add Dentists Ratio
-dentists = pd.read_csv('dentists.csv')
-file = file.merge(dentists, how='left', on='countyFIPS')
-
-## Change Whole Numbers to 0 - 1 Scale
-file['pctDS0_hi_c'] = file['pctDS0_hi_c']/100
-file['pctDS0_hi_s'] = file['pctDS0_hi_s']/100
-file['pctDS0_hi_n'] = file['pctDS0_hi_n']/100
-file['pctDSGt0kAndLt1000k_hi_c'] = file['pctDSGt0kAndLt1000k_hi_c']/100
-file['pctDSGt0kAndLt1000k_hi_n'] = file['pctDSGt0kAndLt1000k_hi_n']/100
-file['pctDSGt1000kAndLt3000k_hi_c'] = file['pctDSGt1000kAndLt3000k_hi_c']/100
-file['pctDSGt1000kAndLt3000k_hi_s'] = file['pctDSGt1000kAndLt3000k_hi_s'] /100
-file['pctDSGt1000kAndLt3000k_hi_n'] = file['pctDSGt1000kAndLt3000k_hi_n']/100
-file['pctDSGt3000kAndLt4000k_hi_c'] = file['pctDSGt3000kAndLt4000k_hi_c']/100
-file['pctDSGt3000kAndLt4000k_hi_s'] = file['pctDSGt3000kAndLt4000k_hi_s']/100
-file['pctDSGt3000kAndLt4000k_hi_n'] = file['pctDSGt3000kAndLt4000k_hi_n'] /100
-file['pctDSGt4000kAndLt6000k_hi_c'] = file['pctDSGt4000kAndLt6000k_hi_c']/100
-file['pctDSGt4000kAndLt6000k_hi_s'] = file['pctDSGt4000kAndLt6000k_hi_s']/100
-file['pctDSGt4000kAndLt6000k_hi_n'] = file['pctDSGt4000kAndLt6000k_hi_n']/100
-file['pctDSGt6000kAndLt10000k_hi_c'] = file['pctDSGt6000kAndLt10000k_hi_c']/100
-file['pctDSGt6000kAndLt10000k_hi_s'] = file['pctDSGt6000kAndLt10000k_hi_s']/100
-file['pctDSGt6000kAndLt10000k_hi_n'] = file['pctDSGt6000kAndLt10000k_hi_n']/100
-file['pctDSGt10000kAndLt15000k_hi_c'] = file['pctDSGt10000kAndLt15000k_hi_c']/100
-file['pctDSGt10000kAndLt15000k_hi_s'] = file['pctDSGt10000kAndLt15000k_hi_s']/100
-file['pctDSGt10000kAndLt15000k_hi_n'] = file['pctDSGt10000kAndLt15000k_hi_n']/100
-file['pctDSGt15000kAndLt25000k_hi_c'] = file['pctDSGt15000kAndLt25000k_hi_c']/100
-file['pctDSGt15000kAndLt25000k_hi_s'] = file['pctDSGt15000kAndLt25000k_hi_s']/100
-file['pctDSGt15000kAndLt25000k_hi_n'] = file['pctDSGt15000kAndLt25000k_hi_n']/100
-file['pctDSGt25000kAndLt50000k_hi_c'] = file['pctDSGt25000kAndLt50000k_hi_c']/100
-file['pctDSGt25000kAndLt50000k_hi_s'] = file['pctDSGt25000kAndLt50000k_hi_s']/100
-file['pctDSGt25000kAndLt50000k_hi_n'] = file['pctDSGt25000kAndLt50000k_hi_n']/100
-file['pctDSGt50000kAndLt100000k_hi_c'] = file['pctDSGt50000kAndLt100000k_hi_c']/100
-file['pctDSGt50000kAndLt100000k_hi_s'] = file['pctDSGt50000kAndLt100000k_hi_s']/100
-file['pctDSGt50000kAndLt100000k_hi_n'] = file['pctDSGt50000kAndLt100000k_hi_n']/100
-file['pctDSGt100000kAndLt1Gig_hi_c'] = file['pctDSGt100000kAndLt1Gig_hi_c']/100
-file['pctDSGt100000kAndLt1Gig_hi_s'] = file['pctDSGt100000kAndLt1Gig_hi_s']/100
-file['pctDSGt100000kAndLt1Gig_hi_n'] = file['pctDSGt100000kAndLt1Gig_hi_n']/100
-file['pctDSGt1Gig_hi_c'] = file['pctDSGt1Gig_hi_c']/100
-file['pctDSGt1Gig_hi_s'] = file['pctDSGt1Gig_hi_s']/100
-file['pctDSGt1Gig_hi_n'] = file['pctDSGt1Gig_hi_n']/100
-file['pctUS0_hi_c'] = file['pctUS0_hi_c']/100
-file['pctUS0_hi_s'] = file['pctUS0_hi_s']/100
-file['pctUS0_hi_n'] = file['pctUS0_hi_n']/100
-file['pctUSGt0kAndLt1000k_hi_c'] = file['pctUSGt0kAndLt1000k_hi_c']/100
-file['pctUSGt0kAndLt1000k_hi_n'] = file['pctUSGt0kAndLt1000k_hi_n']/100
-file['pctUSGt1000kAndLt3000k_hi_c'] = file['pctUSGt1000kAndLt3000k_hi_c']/100
-file['pctUSGt1000kAndLt3000k_hi_s'] = file['pctUSGt1000kAndLt3000k_hi_s'] /100
-file['pctUSGt1000kAndLt3000k_hi_n'] = file['pctUSGt1000kAndLt3000k_hi_n']/100
-file['pctUSGt3000kAndLt4000k_hi_c'] = file['pctUSGt3000kAndLt4000k_hi_c']/100
-file['pctUSGt3000kAndLt4000k_hi_s'] = file['pctUSGt3000kAndLt4000k_hi_s']/100
-file['pctUSGt3000kAndLt4000k_hi_n'] = file['pctUSGt3000kAndLt4000k_hi_n'] /100
-file['pctUSGt4000kAndLt6000k_hi_c'] = file['pctUSGt4000kAndLt6000k_hi_c']/100
-file['pctUSGt4000kAndLt6000k_hi_s'] = file['pctUSGt4000kAndLt6000k_hi_s']/100
-file['pctUSGt4000kAndLt6000k_hi_n'] = file['pctUSGt4000kAndLt6000k_hi_n']/100
-file['pctUSGt6000kAndLt10000k_hi_c'] = file['pctUSGt6000kAndLt10000k_hi_c']/100
-file['pctUSGt6000kAndLt10000k_hi_s'] = file['pctUSGt6000kAndLt10000k_hi_s']/100
-file['pctUSGt6000kAndLt10000k_hi_n'] = file['pctUSGt6000kAndLt10000k_hi_n']/100
-file['pctUSGt10000kAndLt15000k_hi_c'] = file['pctUSGt10000kAndLt15000k_hi_c']/100
-file['pctUSGt10000kAndLt15000k_hi_s'] = file['pctUSGt10000kAndLt15000k_hi_s']/100
-file['pctUSGt10000kAndLt15000k_hi_n'] = file['pctUSGt10000kAndLt15000k_hi_n']/100
-file['pctUSGt15000kAndLt25000k_hi_c'] = file['pctUSGt15000kAndLt25000k_hi_c']/100
-file['pctUSGt15000kAndLt25000k_hi_s'] = file['pctUSGt15000kAndLt25000k_hi_s']/100
-file['pctUSGt15000kAndLt25000k_hi_n'] = file['pctUSGt15000kAndLt25000k_hi_n']/100
-file['pctUSGt25000kAndLt50000k_hi_c'] = file['pctUSGt25000kAndLt50000k_hi_c']/100
-file['pctUSGt25000kAndLt50000k_hi_s'] = file['pctUSGt25000kAndLt50000k_hi_s']/100
-file['pctUSGt25000kAndLt50000k_hi_n'] = file['pctUSGt25000kAndLt50000k_hi_n']/100
-file['pctUSGt50000kAndLt100000k_hi_c'] = file['pctUSGt50000kAndLt100000k_hi_c']/100
-file['pctUSGt50000kAndLt100000k_hi_s'] = file['pctUSGt50000kAndLt100000k_hi_s']/100
-file['pctUSGt50000kAndLt100000k_hi_n'] = file['pctUSGt50000kAndLt100000k_hi_n']/100
-file['pctUSGt100000kAndLt1Gig_hi_c'] = file['pctUSGt100000kAndLt1Gig_hi_c']/100
-file['pctUSGt100000kAndLt1Gig_hi_s'] = file['pctUSGt100000kAndLt1Gig_hi_s']/100
-file['pctUSGt100000kAndLt1Gig_hi_n'] = file['pctUSGt100000kAndLt1Gig_hi_n']/100
-file['pctUSGt1Gig_hi_c'] = file['pctUSGt1Gig_hi_c']/100
-file['pctUSGt1Gig_hi_s'] = file['pctUSGt1Gig_hi_s']/100
-file['pctUSGt1Gig_hi_n'] = file['pctUSGt1Gig_hi_n']/100
-
-file['mcds_prop_c'] = file['mcds_prop_c']/100
-file['mcds_prop_s'] = file['mcds_prop_s']/100
-file['mcds_prop_n'] = file['mcds_prop_n']/100
-file['mcus_prop_c'] = file['mcus_prop_c']/100
-file['mcus_prop_s'] = file['mcus_prop_s']/100
-file['mcus_prop_n'] = file['mcus_prop_n']/100
-
-file['sum_prov_cnty_c_0'] = file['sum_prov_cnty_c_0']/100
-file['sum_prov_cnty_c_1'] = file['sum_prov_cnty_c_1']/100
-file['sum_prov_cnty_c_2'] = file['sum_prov_cnty_c_2']/100
-file['sum_prov_cnty_c_3'] = file['sum_prov_cnty_c_3']/100
-file['sum_prov_cnty_c_4'] = file['sum_prov_cnty_c_4']/100
-file['sum_prov_cnty_c_5'] = file['sum_prov_cnty_c_5']/100
-file['sum_prov_cnty_c_6'] = file['sum_prov_cnty_c_6']/100
-file['sum_prov_cnty_c_7'] = file['sum_prov_cnty_c_7']/100
-file['sum_prov_cnty_greq_c_8'] = file['sum_prov_cnty_greq_c_8']/100
-file['sum_prov_cnty_b_0'] = file['sum_prov_cnty_b_0']/100
-file['sum_prov_cnty_b_1'] = file['sum_prov_cnty_b_1']/100
-file['sum_prov_cnty_b_2'] = file['sum_prov_cnty_b_2']/100
-file['sum_prov_cnty_b_3'] = file['sum_prov_cnty_b_3']/100
-file['sum_prov_cnty_b_4'] = file['sum_prov_cnty_b_4']/100
-file['sum_prov_cnty_b_5'] = file['sum_prov_cnty_b_5']/100
-file['sum_prov_cnty_b_6'] = file['sum_prov_cnty_b_6']/100
-file['sum_prov_cnty_b_7'] = file['sum_prov_cnty_b_7']/100
-file['sum_prov_cnty_greq_b_8'] = file['sum_prov_cnty_greq_b_8']/100
-file['sum_prov_cnty_a_0'] = file['sum_prov_cnty_a_0']/100
-file['sum_prov_cnty_a_1'] = file['sum_prov_cnty_a_1']/100
-file['sum_prov_cnty_a_2'] = file['sum_prov_cnty_a_2']/100
-file['sum_prov_cnty_a_3'] = file['sum_prov_cnty_a_3']/100
-file['sum_prov_cnty_a_4'] = file['sum_prov_cnty_a_4']/100
-file['sum_prov_cnty_a_5'] = file['sum_prov_cnty_a_5']/100
-file['sum_prov_cnty_a_6'] = file['sum_prov_cnty_a_6']/100
-file['sum_prov_cnty_a_7'] = file['sum_prov_cnty_a_7']/100
-file['sum_prov_cnty_greq_a_8'] = file['sum_prov_cnty_greq_a_8']/100
-
-file['sum_prov_state_c_0'] = file['sum_prov_state_c_0']/100
-file['sum_prov_state_c_1'] = file['sum_prov_state_c_1']/100
-file['sum_prov_state_c_2'] = file['sum_prov_state_c_2']/100
-file['sum_prov_state_c_3'] = file['sum_prov_state_c_3']/100
-file['sum_prov_state_c_4'] = file['sum_prov_state_c_4']/100
-file['sum_prov_state_c_5'] = file['sum_prov_state_c_5']/100
-file['sum_prov_state_c_6'] = file['sum_prov_state_c_6']/100
-file['sum_prov_state_c_7'] = file['sum_prov_state_c_7']/100
-file['sum_prov_state_greq_c_8'] = file['sum_prov_state_greq_c_8']/100
-file['sum_prov_state_b_0'] = file['sum_prov_state_b_0']/100
-file['sum_prov_state_b_1'] = file['sum_prov_state_b_1']/100
-file['sum_prov_state_b_2'] = file['sum_prov_state_b_2']/100
-file['sum_prov_state_b_3'] = file['sum_prov_state_b_3']/100
-file['sum_prov_state_b_4'] = file['sum_prov_state_b_4']/100
-file['sum_prov_state_b_5'] = file['sum_prov_state_b_5']/100
-file['sum_prov_state_b_6'] = file['sum_prov_state_b_6']/100
-file['sum_prov_state_b_7'] = file['sum_prov_state_b_7']/100
-file['sum_prov_state_greq_b_8'] = file['sum_prov_state_greq_b_8']/100
-file['sum_prov_state_a_0'] = file['sum_prov_state_a_0']/100
-file['sum_prov_state_a_1'] = file['sum_prov_state_a_1']/100
-file['sum_prov_state_a_2'] = file['sum_prov_state_a_2']/100
-file['sum_prov_state_a_3'] = file['sum_prov_state_a_3']/100
-file['sum_prov_state_a_4'] = file['sum_prov_state_a_4']/100
-file['sum_prov_state_a_5'] = file['sum_prov_state_a_5']/100
-file['sum_prov_state_a_6'] = file['sum_prov_state_a_6']/100
-file['sum_prov_state_a_7'] = file['sum_prov_state_a_7']/100
-file['sum_prov_state_greq_a_8'] = file['sum_prov_state_greq_a_8']/100
-
-file['sum_prov_nat_c_0'] = file['sum_prov_nat_c_0']/100
-file['sum_prov_nat_c_1'] = file['sum_prov_nat_c_1']/100
-file['sum_prov_nat_c_2'] = file['sum_prov_nat_c_2']/100
-file['sum_prov_nat_c_3'] = file['sum_prov_nat_c_3']/100
-file['sum_prov_nat_c_4'] = file['sum_prov_nat_c_4']/100
-file['sum_prov_nat_c_5'] = file['sum_prov_nat_c_5']/100
-file['sum_prov_nat_c_6'] = file['sum_prov_nat_c_6']/100
-file['sum_prov_nat_c_7'] = file['sum_prov_nat_c_7']/100
-file['sum_prov_nat_greq_c_8'] = file['sum_prov_nat_greq_c_8']/100
-file['sum_prov_nat_b_0'] = file['sum_prov_nat_b_0']/100
-file['sum_prov_nat_b_1'] = file['sum_prov_nat_b_1']/100
-file['sum_prov_nat_b_2'] = file['sum_prov_nat_b_2']/100
-file['sum_prov_nat_b_3'] = file['sum_prov_nat_b_3']/100
-file['sum_prov_nat_b_4'] = file['sum_prov_nat_b_4']/100
-file['sum_prov_nat_b_5'] = file['sum_prov_nat_b_5']/100
-file['sum_prov_nat_b_6'] = file['sum_prov_nat_b_6']/100
-file['sum_prov_nat_b_7'] = file['sum_prov_nat_b_7']/100
-file['sum_prov_nat_greq_b_8'] = file['sum_prov_nat_greq_b_8']/100
-file['sum_prov_nat_a_0'] = file['sum_prov_nat_a_0']/100
-file['sum_prov_nat_a_1'] = file['sum_prov_nat_a_1']/100
-file['sum_prov_nat_a_2'] = file['sum_prov_nat_a_2']/100
-file['sum_prov_nat_a_3'] = file['sum_prov_nat_a_3']/100
-file['sum_prov_nat_a_4'] = file['sum_prov_nat_a_4']/100
-file['sum_prov_nat_a_5'] = file['sum_prov_nat_a_5']/100
-file['sum_prov_nat_a_6'] = file['sum_prov_nat_a_6']/100
-file['sum_prov_nat_a_7'] = file['sum_prov_nat_a_7']/100
-file['sum_prov_nat_greq_a_8'] = file['sum_prov_nat_greq_a_8']/100
-
-file['cumm_prov_cnty_c_0'] = file['cumm_prov_cnty_c_0']/100
-file['cumm_prov_cnty_c_1'] = file['cumm_prov_cnty_c_1']/100
-file['cumm_prov_cnty_c_2'] = file['cumm_prov_cnty_c_2']/100
-file['cumm_prov_cnty_c_3'] = file['cumm_prov_cnty_c_3']/100
-file['cumm_prov_cnty_c_4'] = file['cumm_prov_cnty_c_4']/100
-file['cumm_prov_cnty_c_5'] = file['cumm_prov_cnty_c_5']/100
-file['cumm_prov_cnty_c_6'] = file['cumm_prov_cnty_c_6']/100
-file['cumm_prov_cnty_c_7'] = file['cumm_prov_cnty_c_7']/100
-file['cumm_prov_cnty_c_8'] = file['cumm_prov_cnty_c_8']/100
-
-file['cumm_prov_cnty_b_0'] = file['cumm_prov_cnty_b_0']/100
-file['cumm_prov_cnty_b_1'] = file['cumm_prov_cnty_b_1']/100
-file['cumm_prov_cnty_b_2'] = file['cumm_prov_cnty_b_2']/100
-file['cumm_prov_cnty_b_3'] = file['cumm_prov_cnty_b_3']/100
-file['cumm_prov_cnty_b_4'] = file['cumm_prov_cnty_b_4']/100
-file['cumm_prov_cnty_b_5'] = file['cumm_prov_cnty_b_5']/100
-file['cumm_prov_cnty_b_6'] = file['cumm_prov_cnty_b_6']/100
-file['cumm_prov_cnty_b_7'] = file['cumm_prov_cnty_b_7']/100
-file['cumm_prov_cnty_b_8'] = file['cumm_prov_cnty_b_8']/100
-
-file['cumm_prov_cnty_a_0'] = file['cumm_prov_cnty_a_0']/100
-file['cumm_prov_cnty_a_1'] = file['cumm_prov_cnty_a_1']/100
-file['cumm_prov_cnty_a_2'] = file['cumm_prov_cnty_a_2']/100
-file['cumm_prov_cnty_a_3'] = file['cumm_prov_cnty_a_3']/100
-file['cumm_prov_cnty_a_4'] = file['cumm_prov_cnty_a_4']/100
-file['cumm_prov_cnty_a_5'] = file['cumm_prov_cnty_a_5']/100
-file['cumm_prov_cnty_a_6'] = file['cumm_prov_cnty_a_6']/100
-file['cumm_prov_cnty_a_7'] = file['cumm_prov_cnty_a_7']/100
-file['cumm_prov_cnty_a_8'] = file['cumm_prov_cnty_a_8']/100
-
-file['cumm_prov_state_c_0'] = file['cumm_prov_state_c_0']/100
-file['cumm_prov_state_c_1'] = file['cumm_prov_state_c_1']/100
-file['cumm_prov_state_c_2'] = file['cumm_prov_state_c_2']/100
-file['cumm_prov_state_c_3'] = file['cumm_prov_state_c_3']/100
-file['cumm_prov_state_c_4'] = file['cumm_prov_state_c_4']/100
-file['cumm_prov_state_c_5'] = file['cumm_prov_state_c_5']/100
-file['cumm_prov_state_c_6'] = file['cumm_prov_state_c_6']/100
-file['cumm_prov_state_c_7'] = file['cumm_prov_state_c_7']/100
-file['cumm_prov_state_c_8'] = file['cumm_prov_state_c_8']/100
-
-file['cumm_prov_state_b_0'] = file['cumm_prov_state_b_0']/100
-file['cumm_prov_state_b_1'] = file['cumm_prov_state_b_1']/100
-file['cumm_prov_state_b_2'] = file['cumm_prov_state_b_2']/100
-file['cumm_prov_state_b_3'] = file['cumm_prov_state_b_3']/100
-file['cumm_prov_state_b_4'] = file['cumm_prov_state_b_4']/100
-file['cumm_prov_state_b_5'] = file['cumm_prov_state_b_5']/100
-file['cumm_prov_state_b_6'] = file['cumm_prov_state_b_6']/100
-file['cumm_prov_state_b_7'] = file['cumm_prov_state_b_7']/100
-file['cumm_prov_state_b_8'] = file['cumm_prov_state_b_8']/100
-
-file['cumm_prov_state_a_0'] = file['cumm_prov_state_a_0']/100
-file['cumm_prov_state_a_1'] = file['cumm_prov_state_a_1']/100
-file['cumm_prov_state_a_2'] = file['cumm_prov_state_a_2']/100
-file['cumm_prov_state_a_3'] = file['cumm_prov_state_a_3']/100
-file['cumm_prov_state_a_4'] = file['cumm_prov_state_a_4']/100
-file['cumm_prov_state_a_5'] = file['cumm_prov_state_a_5']/100
-file['cumm_prov_state_a_6'] = file['cumm_prov_state_a_6']/100
-file['cumm_prov_state_a_7'] = file['cumm_prov_state_a_7']/100
-file['cumm_prov_state_a_8'] = file['cumm_prov_state_a_8']/100
-
-file['cumm_prov_nat_c_0'] = file['cumm_prov_nat_c_0']/100
-file['cumm_prov_nat_c_1'] = file['cumm_prov_nat_c_1']/100
-file['cumm_prov_nat_c_2'] = file['cumm_prov_nat_c_2']/100
-file['cumm_prov_nat_c_3'] = file['cumm_prov_nat_c_3']/100
-file['cumm_prov_nat_c_4'] = file['cumm_prov_nat_c_4']/100
-file['cumm_prov_nat_c_5'] = file['cumm_prov_nat_c_5']/100
-file['cumm_prov_nat_c_6'] = file['cumm_prov_nat_c_6']/100
-file['cumm_prov_nat_c_7'] = file['cumm_prov_nat_c_7']/100
-file['cumm_prov_nat_c_8'] = file['cumm_prov_nat_c_8']/100
-
-file['cumm_prov_nat_b_0'] = file['cumm_prov_nat_b_0']/100
-file['cumm_prov_nat_b_1'] = file['cumm_prov_nat_b_1']/100
-file['cumm_prov_nat_b_2'] = file['cumm_prov_nat_b_2']/100
-file['cumm_prov_nat_b_3'] = file['cumm_prov_nat_b_3']/100
-file['cumm_prov_nat_b_4'] = file['cumm_prov_nat_b_4']/100
-file['cumm_prov_nat_b_5'] = file['cumm_prov_nat_b_5']/100
-file['cumm_prov_nat_b_6'] = file['cumm_prov_nat_b_6']/100
-file['cumm_prov_nat_b_7'] = file['cumm_prov_nat_b_7']/100
-file['cumm_prov_nat_b_8'] = file['cumm_prov_nat_b_8']/100
-
-file['cumm_prov_nat_a_0'] = file['cumm_prov_nat_a_0']/100
-file['cumm_prov_nat_a_1'] = file['cumm_prov_nat_a_1']/100
-file['cumm_prov_nat_a_2'] = file['cumm_prov_nat_a_2']/100
-file['cumm_prov_nat_a_3'] = file['cumm_prov_nat_a_3']/100
-file['cumm_prov_nat_a_4'] = file['cumm_prov_nat_a_4']/100
-file['cumm_prov_nat_a_5'] = file['cumm_prov_nat_a_5']/100
-file['cumm_prov_nat_a_6'] = file['cumm_prov_nat_a_6']/100
-file['cumm_prov_nat_a_7'] = file['cumm_prov_nat_a_7']/100
-file['cumm_prov_nat_a_8'] = file['cumm_prov_nat_a_8']/100
-
-file['cumm_prov_cnty_c_50th'] = file['cumm_prov_cnty_c_50th']/100
-file['cumm_prov_cnty_b_50th'] = file['cumm_prov_cnty_b_50th']/100	
-file['cumm_prov_cnty_a_50th'] = file['cumm_prov_cnty_a_50th']/100
-
-file['cumm_prov_state_c_50th'] = file['cumm_prov_state_c_50th']/100	
-file['cumm_prov_state_b_50th'] = file['cumm_prov_state_b_50th']/100		
-file['cumm_prov_state_a_50th'] = file['cumm_prov_state_a_50th']/100
-
-file['cumm_prov_nat_c_50th'] = file['cumm_prov_nat_c_50th']/100	
-file['cumm_prov_nat_b_50th'] = file['cumm_prov_nat_b_50th']/100		
-file['cumm_prov_nat_a_50th'] = file['cumm_prov_nat_a_50th']/100
-
-file['dsgteq25_c'] = file['dsgteq25_c']/100
-file['dsgteq25_s'] = file['dsgteq25_s']/100
-file['dsgteq25_n'] = file['dsgteq25_n']/100
-file['usgteq3_c'] = file['usgteq3_c']/100
-file['usgteq3_s'] = file['usgteq3_s']/100
-file['usgteq3_n'] = file['usgteq3_n']/100
-
-ruralblocks = pd.read_csv('blocks_with_rural_designations.csv', dtype={'blocks_fips':'str'})
-ruralblocks = ruralblocks[['block_fips','urban_rural','county_fips']]
-ruralblocks['block_fips'] = ruralblocks['block_fips'].apply(lambda x: '{0:0>15}'.format(x))
-
-allblocks = pd.read_csv('us2016.csv', dtype={'blocks_fips':'str'})
-allblocks = allblocks[['block_fips','pop2016']]
-allblocks['block_fips'] = allblocks['block_fips'].apply(lambda x: '{0:0>15}'.format(x))
-
-ruralblocks = ruralblocks.merge(allblocks, how='inner', on='block_fips')
-
-ruralblocks['stateFIPS'] = pd.to_numeric(ruralblocks['block_fips'].astype(str).str[:2])
-ruralblocks['countyFIPS'] = pd.to_numeric(ruralblocks['block_fips'].astype(str).str[:5])
-county_rural_pop = ruralblocks.groupby(['countyFIPS'], as_index = False)['pop2016'].sum()
-state_rural_pop = ruralblocks.groupby(['stateFIPS'], as_index = False)['pop2016'].sum()
-
-file = file.merge(county_rural_pop, how='left', on='countyFIPS')
-file = file.merge(state_rural_pop, how='left', on='stateFIPS')
-
-file.to_csv(os.path.join('file2.csv'))
-
+file.to_csv(os.path.join('C2H.csv'))
